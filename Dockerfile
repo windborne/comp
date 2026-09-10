@@ -8,7 +8,15 @@ WORKDIR /app
 # Copy workspace configuration
 COPY package.json bun.lock ./
 
-# Copy package.json files for all packages (exclude local db; use published @trycompai/db)
+# Copy package.json files for every workspace package the built apps resolve,
+# directly or transitively. bun needs each one present to satisfy the
+# `workspace:*` ranges declared in apps/app, apps/portal and packages/company —
+# a missing file fails the install with "failed to resolve" rather than falling
+# back to a registry version.
+COPY packages/auth/package.json ./packages/auth/
+COPY packages/billing/package.json ./packages/billing/
+COPY packages/company/package.json ./packages/company/
+COPY packages/db/package.json ./packages/db/
 COPY packages/kv/package.json ./packages/kv/
 COPY packages/ui/package.json ./packages/ui/
 COPY packages/email/package.json ./packages/email/
@@ -60,6 +68,9 @@ WORKDIR /app
 COPY packages ./packages
 COPY apps/app ./apps/app
 
+# turbo.json is required by the workspace package build below.
+COPY turbo.json ./
+
 # Bring in node_modules for build and prisma prebuild
 COPY --from=deps /app/node_modules ./node_modules
 
@@ -89,6 +100,13 @@ ENV NEXT_PUBLIC_BETTER_AUTH_URL=$NEXT_PUBLIC_BETTER_AUTH_URL \
     NODE_OPTIONS=--max_old_space_size=6144
 
 # Build the app
+# Build the workspace packages the app imports. Their package.json main
+# fields point at dist/, which does not exist in a fresh checkout, so without
+# this the Next build fails with "Module not found: Can't resolve
+# '@trycompai/auth'" (and billing, company). transpilePackages does not help —
+# it changes transpilation, not module resolution.
+RUN bunx turbo run build --filter=@trycompai/app^...
+
 RUN cd apps/app && SKIP_ENV_VALIDATION=true bun run build:docker
 
 # =============================================================================
@@ -117,6 +135,9 @@ WORKDIR /app
 COPY packages ./packages
 COPY apps/portal ./apps/portal
 
+# turbo.json is required by the workspace package build below.
+COPY turbo.json ./
+
 # Bring in node_modules for build and prisma prebuild
 COPY --from=deps /app/node_modules ./node_modules
 
@@ -126,12 +147,21 @@ RUN cp packages/db/dist/schema.prisma apps/portal/prisma/schema.prisma
 
 # Ensure Next build has required public env at build-time
 ARG NEXT_PUBLIC_BETTER_AUTH_URL
+# The portal's auth client reads NEXT_PUBLIC_API_URL in the browser
+# (apps/portal/src/app/lib/auth-client.ts), so it must be baked in here.
+# Without it the built portal calls http://localhost:3333 from the user's
+# browser and every auth request fails. app-builder already accepts this arg.
+ARG NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_BETTER_AUTH_URL=$NEXT_PUBLIC_BETTER_AUTH_URL \
+    NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production \
     NEXT_OUTPUT_STANDALONE=true \
     NODE_OPTIONS=--max_old_space_size=6144
 
 # Build the portal
+# Same as app-builder: the portal resolves workspace packages from dist/.
+RUN bunx turbo run build --filter=@trycompai/portal^...
+
 RUN cd apps/portal && SKIP_ENV_VALIDATION=true bun run build:docker
 
 # =============================================================================
