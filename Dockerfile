@@ -143,7 +143,16 @@ COPY --from=deps /app/node_modules ./node_modules
 
 # Pre-combine schemas for portal build
 RUN cd packages/db && node scripts/combine-schemas.js
-RUN cp packages/db/dist/schema.prisma apps/portal/prisma/schema.prisma
+# The portal's prisma/server.ts imports a LOCAL generated client
+# (src/generated/prisma), produced by `prisma generate --schema=prisma/schema` —
+# a directory whose tracked schema.prisma holds only the generator block, zero
+# models. It previously copied the combined schema to a sibling *file*
+# (prisma/schema.prisma), which prisma never reads when given the directory, so
+# the portal type-checked against a model-less client:
+#   Type error: Property 'policy' does not exist on type 'PrismaClient'.
+# db:getschema is the repo's own way to populate that directory with the model
+# files. (apps/app is unaffected: it imports the global @prisma/client instead.)
+RUN cd apps/portal && bun run db:getschema
 
 # Ensure Next build has required public env at build-time
 ARG NEXT_PUBLIC_BETTER_AUTH_URL
