@@ -15,11 +15,10 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthContext, OrganizationId } from '../auth/auth-context.decorator';
+import { OrganizationId } from '../auth/auth-context.decorator';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
-import type { AuthContext as AuthContextType } from '../auth/types';
 import { SecretsService } from './secrets.service';
 
 @ApiTags('Secrets')
@@ -32,24 +31,9 @@ export class SecretsController {
   @Get()
   @RequirePermission('secret', 'read')
   @ApiOperation({ summary: 'List all secrets (metadata only, no values)' })
-  async listSecrets(
-    @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
-  ) {
+  async listSecrets(@OrganizationId() organizationId: string) {
     const secrets = await this.secretsService.listSecrets(organizationId);
-
-    return {
-      data: secrets,
-      count: secrets.length,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data: secrets, count: secrets.length };
   }
 
   @Get(':id')
@@ -59,21 +43,9 @@ export class SecretsController {
   async getSecret(
     @Param('id') id: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const secret = await this.secretsService.getSecret(id, organizationId);
-
-    return {
-      secret,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { secret };
   }
 
   @Post()
@@ -100,21 +72,9 @@ export class SecretsController {
       category?: string;
     },
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const secret = await this.secretsService.createSecret(organizationId, body);
-
-    return {
-      secret,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { secret };
   }
 
   @Put(':id')
@@ -131,25 +91,13 @@ export class SecretsController {
       category?: string | null;
     },
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const secret = await this.secretsService.updateSecret(
       id,
       organizationId,
       body,
     );
-
-    return {
-      secret,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { secret };
   }
 
   @Delete(':id')
@@ -159,20 +107,7 @@ export class SecretsController {
   async deleteSecret(
     @Param('id') id: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const result = await this.secretsService.deleteSecret(id, organizationId);
-
-    return {
-      ...result,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.secretsService.deleteSecret(id, organizationId);
   }
 }

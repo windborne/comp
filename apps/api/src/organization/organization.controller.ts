@@ -66,17 +66,7 @@ export class OrganizationController {
     const org = await this.organizationService.findById(organizationId);
     const logoUrl = await this.organizationService.getLogoSignedUrl(org.logo);
 
-    const result: Record<string, unknown> = {
-      ...org,
-      logoUrl,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    const result: Record<string, unknown> = { ...org, logoUrl };
 
     if (includeOwnership === 'true' && authContext.userId) {
       const ownership = await this.organizationService.getOwnershipData(
@@ -107,25 +97,9 @@ export class OrganizationController {
   @ApiResponse(UPDATE_ORGANIZATION_RESPONSES[404])
   async updateOrganization(
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
     @Body() updateData: UpdateOrganizationDto,
   ) {
-    const updatedOrg = await this.organizationService.updateById(
-      organizationId,
-      updateData,
-    );
-
-    return {
-      ...updatedOrg,
-      authType: authContext.authType,
-      // Include user context for session auth (helpful for debugging)
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return this.organizationService.updateById(organizationId, updateData);
   }
 
   @Post('transfer-ownership')
@@ -163,21 +137,11 @@ export class OrganizationController {
       userId = authContext.userId;
     }
 
-    const result = await this.organizationService.transferOwnership(
+    return this.organizationService.transferOwnership(
       organizationId,
       userId,
       transferData.newOwnerId,
     );
-
-    return {
-      ...result,
-      authType: authContext.authType,
-      // Include user context (helpful for debugging)
-      authenticatedUser: {
-        id: userId,
-        ...(authContext.userEmail && { email: authContext.userEmail }),
-      },
-    };
   }
 
   @Delete()
@@ -186,23 +150,8 @@ export class OrganizationController {
   @ApiResponse(DELETE_ORGANIZATION_RESPONSES[200])
   @ApiResponse(DELETE_ORGANIZATION_RESPONSES[401])
   @ApiResponse(DELETE_ORGANIZATION_RESPONSES[404])
-  async deleteOrganization(
-    @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
-  ) {
-    const result = await this.organizationService.deleteById(organizationId);
-
-    return {
-      ...result,
-      authType: authContext.authType,
-      // Include user context for session auth (helpful for debugging)
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+  async deleteOrganization(@OrganizationId() organizationId: string) {
+    return this.organizationService.deleteById(organizationId);
   }
 
   @Put('role-notifications')

@@ -7,9 +7,8 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthContext, OrganizationId } from '../auth/auth-context.decorator';
+import { OrganizationId } from '../auth/auth-context.decorator';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
-import type { AuthContext as AuthContextType } from '../auth/types';
 import {
   CreateUploadUrlDto,
   UploadUrlResponseDto,
@@ -54,19 +53,7 @@ export class UploadsController {
   async createUploadUrl(
     @Body() dto: CreateUploadUrlDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const data = await this.uploadsService.createUploadUrl(organizationId, dto);
-
-    return {
-      ...data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return this.uploadsService.createUploadUrl(organizationId, dto);
   }
 }

@@ -68,11 +68,7 @@ export class RiskAcceptancesController {
     );
     this.assertRiskAccess(risk, authContext);
 
-    return {
-      data: acceptances,
-      authType: authContext.authType,
-      ...this.authenticatedUser(authContext),
-    };
+    return { data: acceptances };
   }
 
   @Post(':id/acceptances')
@@ -102,11 +98,7 @@ export class RiskAcceptancesController {
       (risk) => this.assertRiskAccess(risk, authContext),
     );
 
-    return {
-      ...acceptance,
-      authType: authContext.authType,
-      ...this.authenticatedUser(authContext),
-    };
+    return acceptance;
   }
 
   private assertRiskAccess(
@@ -120,16 +112,5 @@ export class RiskAcceptancesController {
     ) {
       throw new ForbiddenException('You do not have access to this risk');
     }
-  }
-
-  private authenticatedUser(authContext: AuthContextType) {
-    return authContext.userId && authContext.userEmail
-      ? {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }
-      : {};
   }
 }

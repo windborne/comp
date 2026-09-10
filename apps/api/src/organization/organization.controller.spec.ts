@@ -104,29 +104,14 @@ describe('OrganizationController', () => {
       mockOrganizationService.getLogoSignedUrl.mockResolvedValue(mockLogoUrl);
     });
 
-    it('should return org with authenticatedUser for session auth', async () => {
+    it('should return org with logo URL', async () => {
       const result = await controller.getOrganization(
         'org_123',
         sessionAuthContext,
       );
 
-      expect(result).toMatchObject({
-        ...mockOrg,
-        logoUrl: mockLogoUrl,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toMatchObject({ ...mockOrg, logoUrl: mockLogoUrl });
       expect(mockOrganizationService.findById).toHaveBeenCalledWith('org_123');
-    });
-
-    it('should return org without authenticatedUser for API key auth', async () => {
-      const result = await controller.getOrganization(
-        'org_123',
-        apiKeyAuthContext,
-      );
-
-      expect(result.authType).toBe('api-key');
-      expect(result.authenticatedUser).toBeUndefined();
     });
 
     it('should include ownership data when includeOwnership=true and session auth', async () => {
@@ -178,11 +163,9 @@ describe('OrganizationController', () => {
     it('passes backgroundCheckStepEnabled through to the service', async () => {
       mockOrganizationService.updateById.mockResolvedValue({ id: 'org_123' });
 
-      await controller.updateOrganization(
-        'org_123',
-        sessionAuthContext,
-        { backgroundCheckStepEnabled: false },
-      );
+      await controller.updateOrganization('org_123', {
+        backgroundCheckStepEnabled: false,
+      });
 
       expect(mockOrganizationService.updateById).toHaveBeenCalledWith(
         'org_123',

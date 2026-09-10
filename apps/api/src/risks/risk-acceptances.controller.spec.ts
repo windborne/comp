@@ -104,11 +104,6 @@ describe('RiskAcceptancesController', () => {
         orgId,
       );
       expect(result.data).toEqual([acceptanceView]);
-      expect(result.authType).toBe('session');
-      expect(result.authenticatedUser).toEqual({
-        id: 'usr_123',
-        email: 'admin@example.com',
-      });
     });
 
     it('denies the list to restricted roles without assignment access', async () => {
@@ -142,7 +137,6 @@ describe('RiskAcceptancesController', () => {
         expect.any(Function),
       );
       expect(result.id).toBe('rska_1');
-      expect(result.authType).toBe('session');
     });
 
     it('passes an access gate that rejects restricted roles without assignment', async () => {

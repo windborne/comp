@@ -31,9 +31,8 @@ import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { Public } from '../auth/public.decorator';
 import { RequirePermission } from '../auth/require-permission.decorator';
-import { OrganizationId, AuthContext } from '../auth/auth-context.decorator';
+import { OrganizationId } from '../auth/auth-context.decorator';
 import { AuditRead } from '../audit/skip-audit-log.decorator';
-import type { AuthContext as AuthContextType } from '../auth/types';
 import { ParseQuestionnaireDto } from './dto/parse-questionnaire.dto';
 import { ExportQuestionnaireDto } from './dto/export-questionnaire.dto';
 import { AnswerSingleQuestionDto } from './dto/answer-single-question.dto';
@@ -78,23 +77,9 @@ export class QuestionnaireController {
   @RequirePermission('questionnaire', 'read')
   @ApiOperation({ summary: 'List questionnaires' })
   @ApiOkResponse({ description: 'List of questionnaires' })
-  async findAll(
-    @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
-  ) {
+  async findAll(@OrganizationId() organizationId: string) {
     const data = await this.questionnaireService.findAll(organizationId);
-    return {
-      data,
-      count: data.length,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data, count: data.length };
   }
 
   @Get(':id')
@@ -104,7 +89,6 @@ export class QuestionnaireController {
   async findById(
     @Param('id') id: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const questionnaire = await this.questionnaireService.findById(
       id,
@@ -113,17 +97,7 @@ export class QuestionnaireController {
     if (!questionnaire) {
       throw new NotFoundException('Questionnaire not found');
     }
-    return {
-      ...questionnaire,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return questionnaire;
   }
 
   // Non-streaming auto-answer for MCP/agent clients. The interactive UI uses the

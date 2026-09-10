@@ -1,11 +1,10 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { db, Prisma } from '@db';
-import { AuthContext, OrganizationId } from '../auth/auth-context.decorator';
+import { OrganizationId } from '../auth/auth-context.decorator';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
-import type { AuthContext as AuthContextType } from '../auth/types';
 import { MAX_AUDIT_LOG_OFFSET } from './audit-log.pagination';
 
 @ApiTags('Audit Logs')
@@ -43,7 +42,6 @@ export class AuditLogController {
   })
   async getAuditLogs(
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
     @Query('entityType') entityType?: string,
     @Query('entityId') entityId?: string,
     @Query('pathContains') pathContains?: string,
@@ -114,16 +112,6 @@ export class AuditLogController {
     // and exposing pages that can never be filled.
     const total = Math.min(rawTotal, MAX_AUDIT_LOG_OFFSET);
 
-    return {
-      data: logs,
-      total,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data: logs, total };
   }
 }

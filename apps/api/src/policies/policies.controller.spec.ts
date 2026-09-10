@@ -187,24 +187,20 @@ describe('PoliciesController', () => {
       const mockPolicies = [{ id: 'pol_1', name: 'Policy 1' }];
       mockPoliciesService.findAll.mockResolvedValue(mockPolicies);
 
-      const result = await controller.getAllPolicies(orgId, mockAuthContext);
+      const result = await controller.getAllPolicies(orgId);
 
       expect(policiesService.findAll).toHaveBeenCalledWith({
         organizationId: orgId,
         excludeContent: false,
         includeArchived: false,
       });
-      expect(result).toEqual({
-        data: mockPolicies,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual({ data: mockPolicies });
     });
 
     it('should pass excludeContent=true to service when query param is "true"', async () => {
       mockPoliciesService.findAll.mockResolvedValue([]);
 
-      await controller.getAllPolicies(orgId, mockAuthContext, 'true');
+      await controller.getAllPolicies(orgId, 'true');
 
       expect(policiesService.findAll).toHaveBeenCalledWith({
         organizationId: orgId,
@@ -216,7 +212,7 @@ describe('PoliciesController', () => {
     it('should treat any non-"true" excludeContent value as false', async () => {
       mockPoliciesService.findAll.mockResolvedValue([]);
 
-      await controller.getAllPolicies(orgId, mockAuthContext, 'false');
+      await controller.getAllPolicies(orgId, 'false');
 
       expect(policiesService.findAll).toHaveBeenCalledWith({
         organizationId: orgId,
@@ -228,30 +224,13 @@ describe('PoliciesController', () => {
     it('should pass includeArchived=true to service when query param is "true"', async () => {
       mockPoliciesService.findAll.mockResolvedValue([]);
 
-      await controller.getAllPolicies(orgId, mockAuthContext, undefined, 'true');
+      await controller.getAllPolicies(orgId, undefined, 'true');
 
       expect(policiesService.findAll).toHaveBeenCalledWith({
         organizationId: orgId,
         excludeContent: false,
         includeArchived: true,
       });
-    });
-
-    it('should omit authenticatedUser when userId is not present', async () => {
-      const noUserContext: AuthContext = {
-        ...mockAuthContext,
-        userId: undefined,
-        userEmail: undefined,
-      };
-      mockPoliciesService.findAll.mockResolvedValue([]);
-
-      const result = await controller.getAllPolicies(orgId, noUserContext);
-
-      expect(result).toEqual({
-        data: [],
-        authType: 'session',
-      });
-      expect(result).not.toHaveProperty('authenticatedUser');
     });
   });
 
@@ -264,22 +243,14 @@ describe('PoliciesController', () => {
         source: 'session',
       });
 
-      const result = await controller.publishAllPolicies(
-        orgId,
-        mockAuthContext,
-        sessionReq(),
-      );
+      const result = await controller.publishAllPolicies(orgId, sessionReq());
 
       expect(policiesService.publishAll).toHaveBeenCalledWith(
         orgId,
         'usr_123',
         undefined,
       );
-      expect(result).toEqual({
-        count: 3,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual(mockResult);
     });
 
     it('attributes bulk publish to the resolved user/member for API-key callers', async () => {
@@ -295,15 +266,7 @@ describe('PoliciesController', () => {
         callerLabel: 'via API key "CI Pipeline"',
       });
 
-      const apiKeyAuthContext: AuthContext = {
-        ...mockAuthContext,
-        userId: undefined,
-        userEmail: undefined,
-        authType: 'api-key',
-        isApiKey: true,
-      };
-
-      await controller.publishAllPolicies(orgId, apiKeyAuthContext, apiKeyReq());
+      await controller.publishAllPolicies(orgId, apiKeyReq());
 
       expect(actingUser.resolve).toHaveBeenCalledWith(
         expect.objectContaining({ isApiKey: true }),
@@ -322,32 +285,20 @@ describe('PoliciesController', () => {
       const mockResult = { url: 'https://s3.example.com/bundle.pdf' };
       mockPoliciesService.downloadAllPoliciesPdf.mockResolvedValue(mockResult);
 
-      const result = await controller.downloadAllPolicies(
-        orgId,
-        mockAuthContext,
-        undefined,
-      );
+      const result = await controller.downloadAllPolicies(orgId, undefined);
 
       expect(policiesService.downloadAllPoliciesPdf).toHaveBeenCalledWith(
         orgId,
         undefined,
       );
-      expect(result).toEqual({
-        url: 'https://s3.example.com/bundle.pdf',
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual(mockResult);
     });
 
     it('parses comma-separated policyIds and passes an array to the service', async () => {
       const mockResult = { downloadUrl: 'https://s3/signed', name: 'all-policies', policyCount: 2 };
       mockPoliciesService.downloadAllPoliciesPdf.mockResolvedValue(mockResult);
 
-      await controller.downloadAllPolicies(
-        orgId,
-        mockAuthContext,
-        'p1, p2 ,p3',
-      );
+      await controller.downloadAllPolicies(orgId, 'p1, p2 ,p3');
 
       expect(policiesService.downloadAllPoliciesPdf).toHaveBeenCalledWith(
         orgId,
@@ -359,11 +310,7 @@ describe('PoliciesController', () => {
       const mockResult = { downloadUrl: 'https://s3/signed', name: 'all-policies', policyCount: 1 };
       mockPoliciesService.downloadAllPoliciesPdf.mockResolvedValue(mockResult);
 
-      await controller.downloadAllPolicies(
-        orgId,
-        mockAuthContext,
-        'p1,,p1,p2,',
-      );
+      await controller.downloadAllPolicies(orgId, 'p1,,p1,p2,');
 
       expect(policiesService.downloadAllPoliciesPdf).toHaveBeenCalledWith(
         orgId,
@@ -375,11 +322,7 @@ describe('PoliciesController', () => {
       const mockResult = { downloadUrl: 'https://s3/signed', name: 'all-policies', policyCount: 10 };
       mockPoliciesService.downloadAllPoliciesPdf.mockResolvedValue(mockResult);
 
-      await controller.downloadAllPolicies(
-        orgId,
-        mockAuthContext,
-        undefined,
-      );
+      await controller.downloadAllPolicies(orgId, undefined);
 
       expect(policiesService.downloadAllPoliciesPdf).toHaveBeenCalledWith(
         orgId,
@@ -391,11 +334,7 @@ describe('PoliciesController', () => {
       const mockResult = { downloadUrl: 'https://s3/signed', name: 'all-policies', policyCount: 10 };
       mockPoliciesService.downloadAllPoliciesPdf.mockResolvedValue(mockResult);
 
-      await controller.downloadAllPolicies(
-        orgId,
-        mockAuthContext,
-        '',
-      );
+      await controller.downloadAllPolicies(orgId, '');
 
       expect(policiesService.downloadAllPoliciesPdf).toHaveBeenCalledWith(
         orgId,
@@ -407,11 +346,7 @@ describe('PoliciesController', () => {
       const mockResult = { downloadUrl: 'https://s3/signed', name: 'all-policies', policyCount: 2 };
       mockPoliciesService.downloadAllPoliciesPdf.mockResolvedValue(mockResult);
 
-      await controller.downloadAllPolicies(
-        orgId,
-        mockAuthContext,
-        ['p1', 'p2'],
-      );
+      await controller.downloadAllPolicies(orgId, ['p1', 'p2']);
 
       expect(policiesService.downloadAllPoliciesPdf).toHaveBeenCalledWith(
         orgId,
@@ -423,11 +358,7 @@ describe('PoliciesController', () => {
       const mockResult = { downloadUrl: 'https://s3/signed', name: 'all-policies', policyCount: 3 };
       mockPoliciesService.downloadAllPoliciesPdf.mockResolvedValue(mockResult);
 
-      await controller.downloadAllPolicies(
-        orgId,
-        mockAuthContext,
-        ['p1,p2', 'p3'],
-      );
+      await controller.downloadAllPolicies(orgId, ['p1,p2', 'p3']);
 
       expect(policiesService.downloadAllPoliciesPdf).toHaveBeenCalledWith(
         orgId,
@@ -441,19 +372,10 @@ describe('PoliciesController', () => {
       const mockPolicy = { id: 'pol_1', name: 'Test Policy' };
       mockPoliciesService.findById.mockResolvedValue(mockPolicy);
 
-      const result = await controller.getPolicy(
-        'pol_1',
-        orgId,
-        mockAuthContext,
-      );
+      const result = await controller.getPolicy('pol_1', orgId);
 
       expect(policiesService.findById).toHaveBeenCalledWith('pol_1', orgId);
-      expect(result).toEqual({
-        id: 'pol_1',
-        name: 'Test Policy',
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual(mockPolicy);
     });
   });
 
@@ -463,19 +385,10 @@ describe('PoliciesController', () => {
       const mockPolicy = { id: 'pol_2', name: 'New Policy' };
       mockPoliciesService.create.mockResolvedValue(mockPolicy);
 
-      const result = await controller.createPolicy(
-        createData as never,
-        orgId,
-        mockAuthContext,
-      );
+      const result = await controller.createPolicy(createData as never, orgId);
 
       expect(policiesService.create).toHaveBeenCalledWith(orgId, createData);
-      expect(result).toEqual({
-        id: 'pol_2',
-        name: 'New Policy',
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual(mockPolicy);
     });
   });
 
@@ -489,7 +402,6 @@ describe('PoliciesController', () => {
         'pol_1',
         updateData as never,
         orgId,
-        mockAuthContext,
       );
 
       expect(policiesService.updateById).toHaveBeenCalledWith(
@@ -497,12 +409,7 @@ describe('PoliciesController', () => {
         orgId,
         updateData,
       );
-      expect(result).toEqual({
-        id: 'pol_1',
-        name: 'Updated Policy',
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual(mockPolicy);
     });
   });
 
@@ -511,18 +418,10 @@ describe('PoliciesController', () => {
       const mockResult = { deleted: true };
       mockPoliciesService.deleteById.mockResolvedValue(mockResult);
 
-      const result = await controller.deletePolicy(
-        'pol_1',
-        orgId,
-        mockAuthContext,
-      );
+      const result = await controller.deletePolicy('pol_1', orgId);
 
       expect(policiesService.deleteById).toHaveBeenCalledWith('pol_1', orgId);
-      expect(result).toEqual({
-        deleted: true,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual(mockResult);
     });
   });
 
@@ -567,11 +466,7 @@ describe('PoliciesController', () => {
       });
       db.control.findMany.mockResolvedValue(allControls);
 
-      const result = await controller.getPolicyControls(
-        'pol_1',
-        orgId,
-        mockAuthContext,
-      );
+      const result = await controller.getPolicyControls('pol_1', orgId);
 
       expect(result.mappedControls).toEqual([
         {
@@ -601,7 +496,6 @@ describe('PoliciesController', () => {
           frameworks: [],
         },
       ]);
-      expect(result.authType).toBe('session');
     });
 
     it('dedupes frameworks when the same FrameworkInstance is reachable via multiple RequirementMaps', async () => {
@@ -635,11 +529,7 @@ describe('PoliciesController', () => {
       });
       db.control.findMany.mockResolvedValue(controls);
 
-      const result = await controller.getPolicyControls(
-        'pol_1',
-        orgId,
-        mockAuthContext,
-      );
+      const result = await controller.getPolicyControls('pol_1', orgId);
 
       expect(result.mappedControls[0].frameworks).toEqual([
         { id: 'fw_soc2', name: 'SOC 2' },
@@ -651,11 +541,7 @@ describe('PoliciesController', () => {
       db.policy.findFirst.mockResolvedValue(null);
       db.control.findMany.mockResolvedValue([]);
 
-      const result = await controller.getPolicyControls(
-        'pol_999',
-        orgId,
-        mockAuthContext,
-      );
+      const result = await controller.getPolicyControls('pol_999', orgId);
 
       expect(result.mappedControls).toEqual([]);
     });
@@ -665,7 +551,7 @@ describe('PoliciesController', () => {
       db.policy.findFirst.mockResolvedValue({ id: 'pol_1', controls: [] });
       db.control.findMany.mockResolvedValue([]);
 
-      await controller.getPolicyControls('pol_1', orgId, mockAuthContext);
+      await controller.getPolicyControls('pol_1', orgId);
 
       expect(db.policy.findFirst).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -693,12 +579,9 @@ describe('PoliciesController', () => {
       const { db } = require('@db');
       db.policy.update.mockResolvedValue({});
 
-      const result = await controller.addPolicyControls(
-        'pol_1',
-        { controlIds: ['ctrl_1', 'ctrl_2'] },
-        orgId,
-        mockAuthContext,
-      );
+      const result = await controller.addPolicyControls('pol_1', {
+        controlIds: ['ctrl_1', 'ctrl_2'],
+      }, orgId);
 
       expect(db.policy.update).toHaveBeenCalledWith({
         where: { id: 'pol_1', organizationId: orgId },
@@ -736,7 +619,6 @@ describe('PoliciesController', () => {
         'pol_1',
         'ctrl_1',
         orgId,
-        mockAuthContext,
       );
 
       expect(db.policy.update).toHaveBeenCalledWith({
@@ -780,12 +662,7 @@ describe('PoliciesController', () => {
           }),
       );
 
-      await controller.removePolicyControl(
-        'pol_1',
-        'ctrl_1',
-        orgId,
-        mockAuthContext,
-      );
+      await controller.removePolicyControl('pol_1', 'ctrl_1', orgId);
 
       expect(db.frameworkControlPolicyLink.deleteMany).toHaveBeenCalledWith({
         where: {
@@ -802,18 +679,10 @@ describe('PoliciesController', () => {
       const mockVersions = [{ id: 'ver_1', version: 1 }];
       mockPoliciesService.getVersions.mockResolvedValue(mockVersions);
 
-      const result = await controller.getPolicyVersions(
-        'pol_1',
-        orgId,
-        mockAuthContext,
-      );
+      const result = await controller.getPolicyVersions('pol_1', orgId);
 
       expect(policiesService.getVersions).toHaveBeenCalledWith('pol_1', orgId);
-      expect(result).toEqual({
-        data: mockVersions,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual({ data: mockVersions });
     });
   });
 
@@ -826,7 +695,6 @@ describe('PoliciesController', () => {
         'pol_1',
         'ver_1',
         orgId,
-        mockAuthContext,
       );
 
       expect(policiesService.getVersionById).toHaveBeenCalledWith(
@@ -872,7 +740,6 @@ describe('PoliciesController', () => {
         'ver_1',
         req,
         orgId,
-        mockAuthContext,
       );
 
       expect(policiesService.updateVersionContent).toHaveBeenCalledWith(
@@ -888,13 +755,7 @@ describe('PoliciesController', () => {
       mockPoliciesService.updateVersionContent.mockResolvedValue({});
       const req = { body: {} };
 
-      await controller.updateVersionContent(
-        'pol_1',
-        'ver_1',
-        req,
-        orgId,
-        mockAuthContext,
-      );
+      await controller.updateVersionContent('pol_1', 'ver_1', req, orgId);
 
       expect(policiesService.updateVersionContent).toHaveBeenCalledWith(
         'pol_1',
@@ -914,7 +775,6 @@ describe('PoliciesController', () => {
         'pol_1',
         'ver_1',
         orgId,
-        mockAuthContext,
       );
 
       expect(policiesService.deleteVersion).toHaveBeenCalledWith(
@@ -958,7 +818,6 @@ describe('PoliciesController', () => {
         'pol_1',
         'ver_1',
         orgId,
-        mockAuthContext,
       );
 
       expect(policiesService.setActiveVersion).toHaveBeenCalledWith(
@@ -981,7 +840,6 @@ describe('PoliciesController', () => {
         'ver_1',
         body as never,
         orgId,
-        mockAuthContext,
       );
 
       expect(policiesService.submitForApproval).toHaveBeenCalledWith(
@@ -1023,12 +881,7 @@ describe('PoliciesController', () => {
       const mockResult = { denied: true };
       mockPoliciesService.denyChanges.mockResolvedValue(mockResult);
 
-      const result = await controller.denyPolicyChanges(
-        'pol_1',
-        body,
-        orgId,
-        mockAuthContext,
-      );
+      const result = await controller.denyPolicyChanges('pol_1', body, orgId);
 
       expect(policiesService.denyChanges).toHaveBeenCalledWith(
         'pol_1',
@@ -1068,11 +921,7 @@ describe('PoliciesController', () => {
         ],
       });
 
-      const result = await controller.getPolicyEvidenceTasks(
-        'pol_1',
-        orgId,
-        mockAuthContext,
-      );
+      const result = await controller.getPolicyEvidenceTasks('pol_1', orgId);
 
       expect(db.policy.findFirst).toHaveBeenCalledWith({
         where: { id: 'pol_1', organizationId: orgId, archivedAt: null },
@@ -1109,7 +958,6 @@ describe('PoliciesController', () => {
         },
       ]);
       expect(result.count).toBe(1);
-      expect(result.authType).toBe('session');
     });
 
     it('throws NotFoundException when policy is not in caller org', async () => {
@@ -1117,7 +965,7 @@ describe('PoliciesController', () => {
       db.policy.findFirst.mockResolvedValue(null);
 
       await expect(
-        controller.getPolicyEvidenceTasks('pol_404', orgId, mockAuthContext),
+        controller.getPolicyEvidenceTasks('pol_404', orgId),
       ).rejects.toThrow('Policy not found');
     });
   });

@@ -20,15 +20,12 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthContext, OrganizationId } from '../auth/auth-context.decorator';
+import { OrganizationId } from '../auth/auth-context.decorator';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
 import { ActingUserResolver } from '../auth/acting-user.service';
-import type {
-  AuthContext as AuthContextType,
-  AuthenticatedRequest,
-} from '../auth/types';
+import type { AuthenticatedRequest } from '../auth/types';
 import { CreateVendorDto } from './dto/create-vendor.dto';
 import { UpdateVendorDto } from './dto/update-vendor.dto';
 import { VendorsService } from './vendors.service';
@@ -70,25 +67,11 @@ export class VendorsController {
   @ApiResponse(GET_ALL_VENDORS_RESPONSES[401])
   @ApiResponse(GET_ALL_VENDORS_RESPONSES[404])
   @ApiResponse(GET_ALL_VENDORS_RESPONSES[500])
-  async getAllVendors(
-    @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
-  ) {
+  async getAllVendors(@OrganizationId() organizationId: string) {
     const vendors =
       await this.vendorsService.findAllByOrganization(organizationId);
 
-    return {
-      data: vendors,
-      count: vendors.length,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data: vendors, count: vendors.length };
   }
 
   @Get(':id')
@@ -102,21 +85,8 @@ export class VendorsController {
   async getVendorById(
     @Param('id') vendorId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const vendor = await this.vendorsService.findById(vendorId, organizationId);
-
-    return {
-      ...vendor,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.vendorsService.findById(vendorId, organizationId);
   }
 
   @Post()
@@ -131,7 +101,6 @@ export class VendorsController {
   async createVendor(
     @Body() createVendorDto: CreateVendorDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
     @Req() req: AuthenticatedRequest,
   ) {
     // Attribute the vendor + its auto-generated assessment task to the acting
@@ -147,23 +116,11 @@ export class VendorsController {
         'Cannot attribute this action — your organization must have at least one active user with the "owner" role.',
       );
     }
-    const vendor = await this.vendorsService.create(
+    return this.vendorsService.create(
       organizationId,
       createVendorDto,
       acting.userId, // Pass user ID for task assignment
     );
-
-    return {
-      ...vendor,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
   }
 
   @Patch(':id')
@@ -180,25 +137,12 @@ export class VendorsController {
     @Param('id') vendorId: string,
     @Body() updateVendorDto: UpdateVendorDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const updatedVendor = await this.vendorsService.updateById(
+    return this.vendorsService.updateById(
       vendorId,
       organizationId,
       updateVendorDto,
     );
-
-    return {
-      ...updatedVendor,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
   }
 
   @Post(':id/trigger-assessment')
@@ -239,23 +183,7 @@ export class VendorsController {
   async deleteVendor(
     @Param('id') vendorId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const result = await this.vendorsService.deleteById(
-      vendorId,
-      organizationId,
-    );
-
-    return {
-      ...result,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.vendorsService.deleteById(vendorId, organizationId);
   }
 }

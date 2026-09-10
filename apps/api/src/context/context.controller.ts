@@ -18,11 +18,10 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthContext, OrganizationId } from '../auth/auth-context.decorator';
+import { OrganizationId } from '../auth/auth-context.decorator';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
-import type { AuthContext as AuthContextType } from '../auth/types';
 import { CreateContextDto } from './dto/create-context.dto';
 import { UpdateContextDto } from './dto/update-context.dto';
 import { ContextService } from './context.service';
@@ -62,31 +61,15 @@ export class ContextController {
   @ApiResponse(GET_ALL_CONTEXT_RESPONSES[500])
   async getAllContext(
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('perPage') perPage?: string,
   ) {
-    const result = await this.contextService.findAllByOrganization(
-      organizationId,
-      {
-        search,
-        page: page ? parseInt(page, 10) : undefined,
-        perPage: perPage ? parseInt(perPage, 10) : undefined,
-      },
-    );
-
-    return {
-      ...result,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.contextService.findAllByOrganization(organizationId, {
+      search,
+      page: page ? parseInt(page, 10) : undefined,
+      perPage: perPage ? parseInt(perPage, 10) : undefined,
+    });
   }
 
   @Get(':id')
@@ -100,24 +83,8 @@ export class ContextController {
   async getContextById(
     @Param('id') contextId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const contextEntry = await this.contextService.findById(
-      contextId,
-      organizationId,
-    );
-
-    return {
-      ...contextEntry,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.contextService.findById(contextId, organizationId);
   }
 
   @Post()
@@ -132,24 +99,8 @@ export class ContextController {
   async createContext(
     @Body() createContextDto: CreateContextDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const contextEntry = await this.contextService.create(
-      organizationId,
-      createContextDto,
-    );
-
-    return {
-      ...contextEntry,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.contextService.create(organizationId, createContextDto);
   }
 
   @Patch(':id')
@@ -166,25 +117,12 @@ export class ContextController {
     @Param('id') contextId: string,
     @Body() updateContextDto: UpdateContextDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const updatedContextEntry = await this.contextService.updateById(
+    return this.contextService.updateById(
       contextId,
       organizationId,
       updateContextDto,
     );
-
-    return {
-      ...updatedContextEntry,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
   }
 
   @Delete(':id')
@@ -198,23 +136,7 @@ export class ContextController {
   async deleteContext(
     @Param('id') contextId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const result = await this.contextService.deleteById(
-      contextId,
-      organizationId,
-    );
-
-    return {
-      ...result,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.contextService.deleteById(contextId, organizationId);
   }
 }

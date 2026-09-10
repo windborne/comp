@@ -1,4 +1,11 @@
-import { Controller, Delete, Get, HttpCode, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiOperation,
   ApiParam,
@@ -122,25 +129,11 @@ export class DevicesController {
       },
     },
   })
-  async getAllDevices(
-    @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
-  ) {
+  async getAllDevices(@OrganizationId() organizationId: string) {
     const devices =
       await this.devicesService.findAllByOrganization(organizationId);
 
-    return {
-      data: devices,
-      count: devices.length,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data: devices, count: devices.length };
   }
 
   @Get('member/:memberId')
@@ -199,26 +192,15 @@ export class DevicesController {
   async getDevicesByMember(
     @Param('memberId') memberId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
-  ): Promise<DevicesByMemberResponseDto> {
+  ): Promise<
+    Omit<DevicesByMemberResponseDto, 'authType' | 'authenticatedUser'>
+  > {
     const [devices, member] = await Promise.all([
       this.devicesService.findAllByMember(organizationId, memberId),
       this.devicesService.getMemberById(organizationId, memberId),
     ]);
 
-    return {
-      data: devices,
-      count: devices.length,
-      member,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data: devices, count: devices.length, member };
   }
 
   @Delete(':id')

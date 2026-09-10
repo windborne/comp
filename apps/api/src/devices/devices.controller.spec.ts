@@ -72,55 +72,25 @@ describe('DevicesController', () => {
   });
 
   describe('getAllDevices', () => {
-    it('should return devices with count and auth info', async () => {
+    it('should return devices with count', async () => {
       const mockDevices = [
         { id: 'dev_1', name: 'MacBook Pro' },
         { id: 'dev_2', name: 'iPhone 15' },
       ];
       mockService.findAllByOrganization.mockResolvedValue(mockDevices);
 
-      const result = await controller.getAllDevices('org_1', mockAuthContext);
+      const result = await controller.getAllDevices('org_1');
 
-      expect(result).toEqual({
-        data: mockDevices,
-        count: 2,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_1', email: 'user@example.com' },
-      });
+      expect(result).toEqual({ data: mockDevices, count: 2 });
       expect(service.findAllByOrganization).toHaveBeenCalledWith('org_1');
     });
 
     it('should return empty array when no devices found', async () => {
       mockService.findAllByOrganization.mockResolvedValue([]);
 
-      const result = await controller.getAllDevices('org_1', mockAuthContext);
+      const result = await controller.getAllDevices('org_1');
 
-      expect(result).toEqual({
-        data: [],
-        count: 0,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_1', email: 'user@example.com' },
-      });
-    });
-
-    it('should not include authenticatedUser when userId or email is absent', async () => {
-      mockService.findAllByOrganization.mockResolvedValue([]);
-
-      const authContextNoUser: AuthContextType = {
-        authType: 'api-key' as const,
-        organizationId: 'org_1',
-        isApiKey: true,
-        isPlatformAdmin: false,
-        userRoles: null,
-      };
-
-      const result = await controller.getAllDevices('org_1', authContextNoUser);
-
-      expect(result).toEqual({
-        data: [],
-        count: 0,
-        authType: 'api-key',
-      });
+      expect(result).toEqual({ data: [], count: 0 });
     });
   });
 
@@ -131,18 +101,12 @@ describe('DevicesController', () => {
       mockService.findAllByMember.mockResolvedValue(mockDevices);
       mockService.getMemberById.mockResolvedValue(mockMember);
 
-      const result = await controller.getDevicesByMember(
-        'mem_1',
-        'org_1',
-        mockAuthContext,
-      );
+      const result = await controller.getDevicesByMember('mem_1', 'org_1');
 
       expect(result).toEqual({
         data: mockDevices,
         count: 1,
         member: mockMember,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_1', email: 'user@example.com' },
       });
       expect(service.findAllByMember).toHaveBeenCalledWith('org_1', 'mem_1');
       expect(service.getMemberById).toHaveBeenCalledWith('org_1', 'mem_1');
@@ -160,36 +124,10 @@ describe('DevicesController', () => {
         return { id: 'mem_1' };
       });
 
-      await controller.getDevicesByMember('mem_1', 'org_1', mockAuthContext);
+      await controller.getDevicesByMember('mem_1', 'org_1');
 
       expect(service.findAllByMember).toHaveBeenCalledTimes(1);
       expect(service.getMemberById).toHaveBeenCalledTimes(1);
-    });
-
-    it('should not include authenticatedUser when userId or email is absent', async () => {
-      mockService.findAllByMember.mockResolvedValue([]);
-      mockService.getMemberById.mockResolvedValue({ id: 'mem_1' });
-
-      const authContextNoUser: AuthContextType = {
-        authType: 'api-key' as const,
-        organizationId: 'org_1',
-        isApiKey: true,
-        isPlatformAdmin: false,
-        userRoles: null,
-      };
-
-      const result = await controller.getDevicesByMember(
-        'mem_1',
-        'org_1',
-        authContextNoUser,
-      );
-
-      expect(result).toEqual({
-        data: [],
-        count: 0,
-        member: { id: 'mem_1' },
-        authType: 'api-key',
-      });
     });
 
     it('should propagate service errors', async () => {
@@ -199,7 +137,7 @@ describe('DevicesController', () => {
       mockService.getMemberById.mockResolvedValue({ id: 'mem_1' });
 
       await expect(
-        controller.getDevicesByMember('mem_1', 'org_1', mockAuthContext),
+        controller.getDevicesByMember('mem_1', 'org_1'),
       ).rejects.toThrow('FleetDM unavailable');
     });
   });

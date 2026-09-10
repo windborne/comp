@@ -130,7 +130,7 @@ describe('PeopleController', () => {
   });
 
   describe('getAllPeople', () => {
-    it('should return people with auth context', async () => {
+    it('should return people with count', async () => {
       const mockPeople = [
         { id: 'mem_1', user: { name: 'Alice' } },
         { id: 'mem_2', user: { name: 'Bob' } },
@@ -138,15 +138,10 @@ describe('PeopleController', () => {
 
       mockPeopleService.findAllByOrganization.mockResolvedValue(mockPeople);
 
-      const result = await controller.getAllPeople('org_123', mockAuthContext);
+      const result = await controller.getAllPeople('org_123');
 
       expect(result.data).toEqual(mockPeople);
       expect(result.count).toBe(2);
-      expect(result.authType).toBe('session');
-      expect(result.authenticatedUser).toEqual({
-        id: 'usr_123',
-        email: 'test@example.com',
-      });
       expect(peopleService.findAllByOrganization).toHaveBeenCalledWith(
         'org_123',
         false,
@@ -157,7 +152,7 @@ describe('PeopleController', () => {
     it('should pass includeDeactivated=true to the service', async () => {
       mockPeopleService.findAllByOrganization.mockResolvedValue([]);
 
-      await controller.getAllPeople('org_123', mockAuthContext, 'true');
+      await controller.getAllPeople('org_123', 'true');
 
       expect(peopleService.findAllByOrganization).toHaveBeenCalledWith(
         'org_123',
@@ -165,26 +160,10 @@ describe('PeopleController', () => {
         undefined,
       );
     });
-
-    it('should not include authenticatedUser when userId is missing', async () => {
-      const apiKeyContext: AuthContext = {
-        ...mockAuthContext,
-        userId: undefined,
-        userEmail: undefined,
-        authType: 'api-key',
-        isApiKey: true,
-      };
-      mockPeopleService.findAllByOrganization.mockResolvedValue([]);
-
-      const result = await controller.getAllPeople('org_123', apiKeyContext);
-
-      expect(result.authenticatedUser).toBeUndefined();
-      expect(result.authType).toBe('api-key');
-    });
   });
 
   describe('createMember', () => {
-    it('should create a member and return with auth context', async () => {
+    it('should create a member', async () => {
       const dto = { userId: 'usr_new', role: 'employee' };
       const createdMember = {
         id: 'mem_new',
@@ -193,14 +172,9 @@ describe('PeopleController', () => {
       };
       mockPeopleService.create.mockResolvedValue(createdMember);
 
-      const result = await controller.createMember(
-        dto as any,
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.createMember(dto as any, 'org_123');
 
       expect(result).toMatchObject(createdMember);
-      expect(result.authType).toBe('session');
       expect(peopleService.create).toHaveBeenCalledWith('org_123', dto);
     });
   });
@@ -220,11 +194,7 @@ describe('PeopleController', () => {
       };
       mockPeopleService.bulkCreate.mockResolvedValue(bulkResult);
 
-      const result = await controller.bulkCreateMembers(
-        dto as any,
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.bulkCreateMembers(dto as any, 'org_123');
 
       expect(result.summary).toEqual(bulkResult.summary);
       expect(peopleService.bulkCreate).toHaveBeenCalledWith('org_123', dto);
@@ -232,21 +202,16 @@ describe('PeopleController', () => {
   });
 
   describe('getPersonById', () => {
-    it('should return a single person with auth context', async () => {
+    it('should return a single person', async () => {
       const person = {
         id: 'mem_1',
         user: { name: 'Alice', email: 'alice@test.com' },
       };
       mockPeopleService.findById.mockResolvedValue(person);
 
-      const result = await controller.getPersonById(
-        'mem_1',
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.getPersonById('mem_1', 'org_123');
 
       expect(result).toMatchObject(person);
-      expect(result.authType).toBe('session');
       expect(peopleService.findById).toHaveBeenCalledWith('mem_1', 'org_123');
     });
   });
@@ -342,11 +307,7 @@ describe('PeopleController', () => {
       };
       mockPeopleService.unlinkDevice.mockResolvedValue(updated);
 
-      const result = await controller.unlinkDevice(
-        'mem_1',
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.unlinkDevice('mem_1', 'org_123');
 
       expect(result).toMatchObject(updated);
       expect(peopleService.unlinkDevice).toHaveBeenCalledWith(
@@ -360,12 +321,7 @@ describe('PeopleController', () => {
     it('should remove a host by ID', async () => {
       mockPeopleService.removeHostById.mockResolvedValue({ success: true });
 
-      const result = await controller.removeHost(
-        'mem_1',
-        42,
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.removeHost('mem_1', 42, 'org_123');
 
       expect(result.success).toBe(true);
       expect(peopleService.removeHostById).toHaveBeenCalledWith(

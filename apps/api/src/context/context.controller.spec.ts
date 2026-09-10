@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
-import type { AuthContext } from '../auth/types';
 import { ContextController } from './context.controller';
 import { ContextService } from './context.service';
 
@@ -28,16 +27,6 @@ describe('ContextController', () => {
   };
 
   const mockGuard = { canActivate: jest.fn().mockReturnValue(true) };
-
-  const mockAuthContext: AuthContext = {
-    organizationId: 'org_123',
-    authType: 'session',
-    isApiKey: false,
-    isPlatformAdmin: false,
-    userId: 'usr_123',
-    userEmail: 'test@example.com',
-    userRoles: ['admin'],
-  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -66,7 +55,6 @@ describe('ContextController', () => {
 
       const result = await controller.getAllContext(
         'org_123',
-        mockAuthContext,
         'SOC2',
         '1',
         '10',
@@ -76,11 +64,7 @@ describe('ContextController', () => {
         'org_123',
         { search: 'SOC2', page: 1, perPage: 10 },
       );
-      expect(result).toEqual({
-        ...serviceResult,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual(serviceResult);
     });
 
     it('should pass undefined for optional query params when not provided', async () => {
@@ -91,7 +75,6 @@ describe('ContextController', () => {
 
       await controller.getAllContext(
         'org_123',
-        mockAuthContext,
         undefined,
         undefined,
         undefined,
@@ -101,32 +84,6 @@ describe('ContextController', () => {
         'org_123',
         { search: undefined, page: undefined, perPage: undefined },
       );
-    });
-
-    it('should not include authenticatedUser when userId is missing', async () => {
-      const noUserContext: AuthContext = {
-        ...mockAuthContext,
-        userId: undefined,
-        userEmail: undefined,
-      };
-      mockContextService.findAllByOrganization.mockResolvedValue({
-        data: [],
-        count: 0,
-      });
-
-      const result = await controller.getAllContext(
-        'org_123',
-        noUserContext,
-        undefined,
-        undefined,
-        undefined,
-      );
-
-      expect(result).toEqual({
-        data: [],
-        count: 0,
-        authType: 'session',
-      });
     });
   });
 
@@ -139,18 +96,10 @@ describe('ContextController', () => {
       };
       mockContextService.findById.mockResolvedValue(contextEntry);
 
-      const result = await controller.getContextById(
-        'ctx_1',
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.getContextById('ctx_1', 'org_123');
 
       expect(contextService.findById).toHaveBeenCalledWith('ctx_1', 'org_123');
-      expect(result).toEqual({
-        ...contextEntry,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual(contextEntry);
     });
   });
 
@@ -160,18 +109,10 @@ describe('ContextController', () => {
       const created = { id: 'ctx_2', ...dto };
       mockContextService.create.mockResolvedValue(created);
 
-      const result = await controller.createContext(
-        dto as never,
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.createContext(dto as never, 'org_123');
 
       expect(contextService.create).toHaveBeenCalledWith('org_123', dto);
-      expect(result).toEqual({
-        ...created,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual(created);
     });
   });
 
@@ -189,7 +130,6 @@ describe('ContextController', () => {
         'ctx_1',
         dto as never,
         'org_123',
-        mockAuthContext,
       );
 
       expect(contextService.updateById).toHaveBeenCalledWith(
@@ -197,11 +137,7 @@ describe('ContextController', () => {
         'org_123',
         dto,
       );
-      expect(result).toEqual({
-        ...updated,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual(updated);
     });
   });
 
@@ -210,21 +146,13 @@ describe('ContextController', () => {
       const deleteResult = { success: true, message: 'Context deleted' };
       mockContextService.deleteById.mockResolvedValue(deleteResult);
 
-      const result = await controller.deleteContext(
-        'ctx_1',
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.deleteContext('ctx_1', 'org_123');
 
       expect(contextService.deleteById).toHaveBeenCalledWith(
         'ctx_1',
         'org_123',
       );
-      expect(result).toEqual({
-        ...deleteResult,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual(deleteResult);
     });
   });
 });
