@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuditLogController } from './audit-log.controller';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
-import type { AuthContext as AuthContextType } from '../auth/types';
 
 jest.mock('../auth/auth.server', () => ({
   auth: { api: { getSession: jest.fn() } },
@@ -32,17 +31,6 @@ describe('AuditLogController', () => {
 
   const mockGuard = { canActivate: jest.fn().mockReturnValue(true) };
 
-  const mockAuthContext: AuthContextType = {
-    authType: 'session' as const,
-    userId: 'usr_1',
-    userEmail: 'user@example.com',
-    organizationId: 'org_1',
-    memberId: 'mem_1',
-    isApiKey: false,
-    isPlatformAdmin: false,
-    userRoles: null,
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuditLogController],
@@ -65,14 +53,9 @@ describe('AuditLogController', () => {
       mockFindMany.mockResolvedValue(mockLogs);
       mockCount.mockResolvedValue(137);
 
-      const result = await controller.getAuditLogs('org_1', mockAuthContext);
+      const result = await controller.getAuditLogs('org_1');
 
-      expect(result).toEqual({
-        data: mockLogs,
-        total: 137,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_1', email: 'user@example.com' },
-      });
+      expect(result).toEqual({ data: mockLogs, total: 137 });
       expect(mockFindMany).toHaveBeenCalledWith({
         where: { organizationId: 'org_1' },
         include: {
@@ -102,7 +85,6 @@ describe('AuditLogController', () => {
 
       await controller.getAuditLogs(
         'org_1',
-        mockAuthContext,
         undefined,
         undefined,
         undefined,
@@ -120,7 +102,6 @@ describe('AuditLogController', () => {
 
       await controller.getAuditLogs(
         'org_1',
-        mockAuthContext,
         undefined,
         undefined,
         undefined,
@@ -138,7 +119,6 @@ describe('AuditLogController', () => {
 
       await controller.getAuditLogs(
         'org_1',
-        mockAuthContext,
         undefined,
         undefined,
         undefined,
@@ -156,7 +136,6 @@ describe('AuditLogController', () => {
 
       await controller.getAuditLogs(
         'org_1',
-        mockAuthContext,
         undefined,
         undefined,
         undefined,
@@ -173,7 +152,7 @@ describe('AuditLogController', () => {
       mockFindMany.mockResolvedValue([]);
       mockCount.mockResolvedValue(500_000);
 
-      const result = await controller.getAuditLogs('org_1', mockAuthContext);
+      const result = await controller.getAuditLogs('org_1');
 
       // Beyond the offset cap the window is unreachable, so total must not
       // exceed it — otherwise the client pager loops load-more forever.
@@ -183,7 +162,7 @@ describe('AuditLogController', () => {
     it('should count with the same filters as the query', async () => {
       mockFindMany.mockResolvedValue([]);
 
-      await controller.getAuditLogs('org_1', mockAuthContext, 'vendor,task');
+      await controller.getAuditLogs('org_1', 'vendor,task');
 
       expect(mockCount).toHaveBeenCalledWith({
         where: {
@@ -196,7 +175,7 @@ describe('AuditLogController', () => {
     it('should filter by single entityType', async () => {
       mockFindMany.mockResolvedValue([]);
 
-      await controller.getAuditLogs('org_1', mockAuthContext, 'policy');
+      await controller.getAuditLogs('org_1', 'policy');
 
       expect(mockFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -208,7 +187,7 @@ describe('AuditLogController', () => {
     it('should filter by multiple comma-separated entityTypes', async () => {
       mockFindMany.mockResolvedValue([]);
 
-      await controller.getAuditLogs('org_1', mockAuthContext, 'risk,task');
+      await controller.getAuditLogs('org_1', 'risk,task');
 
       expect(mockFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -223,12 +202,7 @@ describe('AuditLogController', () => {
     it('should filter by single entityId', async () => {
       mockFindMany.mockResolvedValue([]);
 
-      await controller.getAuditLogs(
-        'org_1',
-        mockAuthContext,
-        undefined,
-        'ent_1',
-      );
+      await controller.getAuditLogs('org_1', undefined, 'ent_1');
 
       expect(mockFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -240,12 +214,7 @@ describe('AuditLogController', () => {
     it('should filter by multiple comma-separated entityIds', async () => {
       mockFindMany.mockResolvedValue([]);
 
-      await controller.getAuditLogs(
-        'org_1',
-        mockAuthContext,
-        undefined,
-        'ent_1,ent_2',
-      );
+      await controller.getAuditLogs('org_1', undefined, 'ent_1,ent_2');
 
       expect(mockFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -260,13 +229,7 @@ describe('AuditLogController', () => {
     it('should filter by pathContains', async () => {
       mockFindMany.mockResolvedValue([]);
 
-      await controller.getAuditLogs(
-        'org_1',
-        mockAuthContext,
-        undefined,
-        undefined,
-        'auto_123',
-      );
+      await controller.getAuditLogs('org_1', undefined, undefined, 'auto_123');
 
       expect(mockFindMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -286,7 +249,6 @@ describe('AuditLogController', () => {
 
       await controller.getAuditLogs(
         'org_1',
-        mockAuthContext,
         undefined,
         undefined,
         undefined,
@@ -303,7 +265,6 @@ describe('AuditLogController', () => {
 
       await controller.getAuditLogs(
         'org_1',
-        mockAuthContext,
         undefined,
         undefined,
         undefined,
@@ -321,7 +282,6 @@ describe('AuditLogController', () => {
 
       await controller.getAuditLogs(
         'org_1',
-        mockAuthContext,
         undefined,
         undefined,
         undefined,
@@ -331,26 +291,6 @@ describe('AuditLogController', () => {
       expect(mockFindMany).toHaveBeenCalledWith(
         expect.objectContaining({ take: 50 }),
       );
-    });
-
-    it('should not include authenticatedUser when userId is absent', async () => {
-      mockFindMany.mockResolvedValue([]);
-
-      const authContextNoUser: AuthContextType = {
-        authType: 'api-key' as const,
-        organizationId: 'org_1',
-        isApiKey: true,
-        isPlatformAdmin: false,
-        userRoles: null,
-      };
-
-      const result = await controller.getAuditLogs('org_1', authContextNoUser);
-
-      expect(result).toEqual({
-        data: [],
-        total: 0,
-        authType: 'api-key',
-      });
     });
   });
 });

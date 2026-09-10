@@ -3,7 +3,7 @@ import { BadRequestException } from '@nestjs/common';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { ActingUserResolver } from '../auth/acting-user.service';
-import type { AuthContext, AuthenticatedRequest } from '../auth/types';
+import type { AuthenticatedRequest } from '../auth/types';
 
 // Mock auth.server to avoid importing better-auth ESM in Jest
 jest.mock('../auth/auth.server', () => ({
@@ -67,24 +67,6 @@ describe('VendorsController', () => {
   const sessionReq = { userId: 'usr_123' } as unknown as AuthenticatedRequest;
   const apiKeyReq = { isApiKey: true } as unknown as AuthenticatedRequest;
 
-  const mockAuthContext: AuthContext = {
-    organizationId: 'org_123',
-    authType: 'session',
-    isApiKey: false,
-    isPlatformAdmin: false,
-    userId: 'usr_123',
-    userEmail: 'test@example.com',
-    userRoles: ['owner'],
-  };
-
-  const apiKeyAuthContext: AuthContext = {
-    ...mockAuthContext,
-    userId: undefined,
-    userEmail: undefined,
-    authType: 'api-key',
-    isApiKey: true,
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [VendorsController],
@@ -136,79 +118,37 @@ describe('VendorsController', () => {
   });
 
   describe('getAllVendors', () => {
-    it('should return vendors with auth context', async () => {
+    it('should return vendors with count', async () => {
       const mockVendors = [
         { id: 'vnd_1', name: 'Vendor A' },
         { id: 'vnd_2', name: 'Vendor B' },
       ];
       mockVendorsService.findAllByOrganization.mockResolvedValue(mockVendors);
 
-      const result = await controller.getAllVendors('org_123', mockAuthContext);
+      const result = await controller.getAllVendors('org_123');
 
       expect(result.data).toEqual(mockVendors);
       expect(result.count).toBe(2);
-      expect(result.authType).toBe('session');
-      expect(result.authenticatedUser).toEqual({
-        id: 'usr_123',
-        email: 'test@example.com',
-      });
       expect(vendorsService.findAllByOrganization).toHaveBeenCalledWith(
         'org_123',
       );
     });
-
-    it('should not include authenticatedUser when userId is missing', async () => {
-      mockVendorsService.findAllByOrganization.mockResolvedValue([]);
-
-      const result = await controller.getAllVendors(
-        'org_123',
-        apiKeyAuthContext,
-      );
-
-      expect(result.authenticatedUser).toBeUndefined();
-      expect(result.authType).toBe('api-key');
-      expect(result.data).toEqual([]);
-      expect(result.count).toBe(0);
-    });
   });
 
   describe('getVendorById', () => {
-    it('should return a single vendor with auth context', async () => {
+    it('should return a single vendor', async () => {
       const mockVendor = { id: 'vnd_1', name: 'Vendor A', status: 'active' };
       mockVendorsService.findById.mockResolvedValue(mockVendor);
 
-      const result = await controller.getVendorById(
-        'vnd_1',
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.getVendorById('vnd_1', 'org_123');
 
       expect(result).toMatchObject(mockVendor);
-      expect(result.authType).toBe('session');
-      expect(result.authenticatedUser).toEqual({
-        id: 'usr_123',
-        email: 'test@example.com',
-      });
       expect(vendorsService.findById).toHaveBeenCalledWith('vnd_1', 'org_123');
-    });
-
-    it('should not include authenticatedUser when userId is missing', async () => {
-      const mockVendor = { id: 'vnd_1', name: 'Vendor A' };
-      mockVendorsService.findById.mockResolvedValue(mockVendor);
-
-      const result = await controller.getVendorById(
-        'vnd_1',
-        'org_123',
-        apiKeyAuthContext,
-      );
-
-      expect(result.authenticatedUser).toBeUndefined();
-      expect(result.authType).toBe('api-key');
     });
   });
 
   describe('createVendor', () => {
-    it('should create a vendor and return with auth context', async () => {
+    it('should create a vendor', async () => {
       const dto = { name: 'New Vendor', category: 'SaaS' };
       const createdVendor = {
         id: 'vnd_new',
@@ -220,16 +160,10 @@ describe('VendorsController', () => {
       const result = await controller.createVendor(
         dto as any,
         'org_123',
-        mockAuthContext,
         sessionReq,
       );
 
       expect(result).toMatchObject(createdVendor);
-      expect(result.authType).toBe('session');
-      expect(result.authenticatedUser).toEqual({
-        id: 'usr_123',
-        email: 'test@example.com',
-      });
       // Session caller: create is attributed to the resolved (session) user.
       expect(vendorsService.create).toHaveBeenCalledWith(
         'org_123',
@@ -254,12 +188,10 @@ describe('VendorsController', () => {
       const result = await controller.createVendor(
         dto as any,
         'org_123',
-        apiKeyAuthContext,
         apiKeyReq,
       );
 
-      expect(result.authenticatedUser).toBeUndefined();
-      expect(result.authType).toBe('api-key');
+      expect(result).toMatchObject(createdVendor);
       expect(vendorsService.create).toHaveBeenCalledWith(
         'org_123',
         dto,
@@ -275,14 +207,14 @@ describe('VendorsController', () => {
       });
 
       await expect(
-        controller.createVendor(dto as any, 'org_123', apiKeyAuthContext, apiKeyReq),
+        controller.createVendor(dto as any, 'org_123', apiKeyReq),
       ).rejects.toThrow(BadRequestException);
       expect(vendorsService.create).not.toHaveBeenCalled();
     });
   });
 
   describe('updateVendor', () => {
-    it('should update a vendor and return with auth context', async () => {
+    it('should update a vendor', async () => {
       const dto = { name: 'Updated Vendor' };
       const updatedVendor = { id: 'vnd_1', name: 'Updated Vendor' };
       mockVendorsService.updateById.mockResolvedValue(updatedVendor);
@@ -291,36 +223,14 @@ describe('VendorsController', () => {
         'vnd_1',
         dto as any,
         'org_123',
-        mockAuthContext,
       );
 
       expect(result).toMatchObject(updatedVendor);
-      expect(result.authType).toBe('session');
-      expect(result.authenticatedUser).toEqual({
-        id: 'usr_123',
-        email: 'test@example.com',
-      });
       expect(vendorsService.updateById).toHaveBeenCalledWith(
         'vnd_1',
         'org_123',
         dto,
       );
-    });
-
-    it('should not include authenticatedUser when userId is missing', async () => {
-      const dto = { name: 'Updated Vendor' };
-      const updatedVendor = { id: 'vnd_1', name: 'Updated Vendor' };
-      mockVendorsService.updateById.mockResolvedValue(updatedVendor);
-
-      const result = await controller.updateVendor(
-        'vnd_1',
-        dto as any,
-        'org_123',
-        apiKeyAuthContext,
-      );
-
-      expect(result.authenticatedUser).toBeUndefined();
-      expect(result.authType).toBe('api-key');
     });
   });
 
@@ -379,40 +289,17 @@ describe('VendorsController', () => {
   });
 
   describe('deleteVendor', () => {
-    it('should delete a vendor and return with auth context', async () => {
+    it('should delete a vendor', async () => {
       const deleteResult = { success: true, id: 'vnd_1' };
       mockVendorsService.deleteById.mockResolvedValue(deleteResult);
 
-      const result = await controller.deleteVendor(
-        'vnd_1',
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.deleteVendor('vnd_1', 'org_123');
 
       expect(result).toMatchObject(deleteResult);
-      expect(result.authType).toBe('session');
-      expect(result.authenticatedUser).toEqual({
-        id: 'usr_123',
-        email: 'test@example.com',
-      });
       expect(vendorsService.deleteById).toHaveBeenCalledWith(
         'vnd_1',
         'org_123',
       );
-    });
-
-    it('should not include authenticatedUser when userId is missing', async () => {
-      const deleteResult = { success: true, id: 'vnd_1' };
-      mockVendorsService.deleteById.mockResolvedValue(deleteResult);
-
-      const result = await controller.deleteVendor(
-        'vnd_1',
-        'org_123',
-        apiKeyAuthContext,
-      );
-
-      expect(result.authenticatedUser).toBeUndefined();
-      expect(result.authType).toBe('api-key');
     });
   });
 });

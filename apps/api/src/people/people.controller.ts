@@ -98,17 +98,7 @@ export class PeopleController {
       apiKeyScopes: authContext.apiKeyScopes,
     });
 
-    return {
-      results,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { results };
   }
 
   @Get()
@@ -121,7 +111,6 @@ export class PeopleController {
   @ApiResponse(GET_ALL_PEOPLE_RESPONSES[500])
   async getAllPeople(
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
     @Query('includeDeactivated') includeDeactivated?: string,
     @Query('onboardAfter') onboardAfter?: string,
     @Query('onboardBefore') onboardBefore?: string,
@@ -152,18 +141,7 @@ export class PeopleController {
       hasFilters ? filters : undefined,
     );
 
-    return {
-      data: people,
-      count: people.length,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data: people, count: people.length };
   }
 
   @Get('devices')
@@ -171,23 +149,9 @@ export class PeopleController {
   @ApiOperation({
     summary: 'Get all employee devices with fleet compliance data',
   })
-  async getDevices(
-    @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
-  ) {
+  async getDevices(@OrganizationId() organizationId: string) {
     const devices = await this.peopleService.getDevices(organizationId);
-
-    return {
-      data: devices,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data: devices };
   }
 
   @Get('test-stats/by-assignee')
@@ -195,24 +159,10 @@ export class PeopleController {
   @ApiOperation({
     summary: 'Get integration test statistics grouped by assignee',
   })
-  async getTestStatsByAssignee(
-    @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
-  ) {
+  async getTestStatsByAssignee(@OrganizationId() organizationId: string) {
     const data =
       await this.peopleService.getTestStatsByAssignee(organizationId);
-
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data };
   }
 
   @Post()
@@ -228,21 +178,8 @@ export class PeopleController {
   async createMember(
     @Body() createData: CreatePeopleDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const member = await this.peopleService.create(organizationId, createData);
-
-    return {
-      ...member,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.peopleService.create(organizationId, createData);
   }
 
   @Post('bulk')
@@ -257,24 +194,8 @@ export class PeopleController {
   async bulkCreateMembers(
     @Body() bulkCreateData: BulkCreatePeopleDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const result = await this.peopleService.bulkCreate(
-      organizationId,
-      bulkCreateData,
-    );
-
-    return {
-      ...result,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.peopleService.bulkCreate(organizationId, bulkCreateData);
   }
 
   @Get('mentionable')
@@ -284,7 +205,6 @@ export class PeopleController {
   })
   async getMentionableMembers(
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
     @Query('resource') resource: string,
   ) {
     if (!resource) {
@@ -303,18 +223,7 @@ export class PeopleController {
       resource,
     );
 
-    return {
-      data: members,
-      count: members.length,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data: members, count: members.length };
   }
 
   @Patch(':id/reactivate')
@@ -325,24 +234,8 @@ export class PeopleController {
   async reactivateMember(
     @Param('id') memberId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const member = await this.peopleService.reactivateById(
-      memberId,
-      organizationId,
-    );
-
-    return {
-      ...member,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.peopleService.reactivateById(memberId, organizationId);
   }
 
   @Get(':id')
@@ -358,21 +251,8 @@ export class PeopleController {
   async getPersonById(
     @Param('id') memberId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const person = await this.peopleService.findById(memberId, organizationId);
-
-    return {
-      ...person,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.peopleService.findById(memberId, organizationId);
   }
 
   @Get(':id/access')
@@ -386,24 +266,12 @@ export class PeopleController {
   async getMemberAccess(
     @Param('id') memberId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const data = await this.peopleAccessService.getMemberAccess(
       organizationId,
       memberId,
     );
-
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data };
   }
 
   @Get(':id/training-videos')
@@ -413,24 +281,12 @@ export class PeopleController {
   async getTrainingVideos(
     @Param('id') memberId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const data = await this.peopleService.getTrainingVideos(
       memberId,
       organizationId,
     );
-
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data };
   }
 
   @Get(':id/fleet-compliance')
@@ -440,24 +296,8 @@ export class PeopleController {
   async getFleetCompliance(
     @Param('id') memberId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const data = await this.peopleService.getFleetCompliance(
-      memberId,
-      organizationId,
-    );
-
-    return {
-      ...data,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.peopleService.getFleetCompliance(memberId, organizationId);
   }
 
   @Patch(':id')
@@ -478,24 +318,12 @@ export class PeopleController {
     @OrganizationId() organizationId: string,
     @AuthContext() authContext: AuthContextType,
   ) {
-    const updatedMember = await this.peopleService.updateById(
+    return this.peopleService.updateById(
       memberId,
       organizationId,
       updateData,
       authContext.userId,
     );
-
-    return {
-      ...updatedMember,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
   }
 
   @Delete(':id/host/:hostId')
@@ -512,25 +340,8 @@ export class PeopleController {
     @Param('id') memberId: string,
     @Param('hostId', ParseIntPipe) hostId: number,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const result = await this.peopleService.removeHostById(
-      memberId,
-      organizationId,
-      hostId,
-    );
-
-    return {
-      ...result,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.peopleService.removeHostById(memberId, organizationId, hostId);
   }
 
   @Post(':id/resend-portal-invite')
@@ -562,24 +373,12 @@ export class PeopleController {
     @AuthContext() authContext: AuthContextType,
     @Query('skipOffboarding') skipOffboarding?: string,
   ) {
-    const result = await this.peopleService.deleteById(
+    return this.peopleService.deleteById(
       memberId,
       organizationId,
       authContext.userId,
       { skipOffboarding: skipOffboarding === 'true' },
     );
-
-    return {
-      ...result,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
   }
 
   @Patch(':id/unlink-device')
@@ -595,24 +394,8 @@ export class PeopleController {
   async unlinkDevice(
     @Param('id') memberId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const updatedMember = await this.peopleService.unlinkDevice(
-      memberId,
-      organizationId,
-    );
-
-    return {
-      ...updatedMember,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.peopleService.unlinkDevice(memberId, organizationId);
   }
 
   @Get(':id/employment-evidence/:eventType')

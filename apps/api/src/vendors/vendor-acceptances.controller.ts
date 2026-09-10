@@ -7,11 +7,10 @@ import {
   ApiSecurity,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthContext, OrganizationId } from '../auth/auth-context.decorator';
+import { OrganizationId } from '../auth/auth-context.decorator';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequirePermission } from '../auth/require-permission.decorator';
-import type { AuthContext as AuthContextType } from '../auth/types';
 import { CreateRiskAcceptanceDto } from '../risks/dto/create-risk-acceptance.dto';
 import { RiskAcceptancesService } from '../risks/risk-acceptances.service';
 import { VENDOR_OPERATIONS } from './schemas/vendor-operations';
@@ -49,18 +48,13 @@ export class VendorAcceptancesController {
   async listVendorAcceptances(
     @Param('id') vendorId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const { acceptances } = await this.riskAcceptancesService.listForVendor(
       vendorId,
       organizationId,
     );
 
-    return {
-      data: acceptances,
-      authType: authContext.authType,
-      ...this.authenticatedUser(authContext),
-    };
+    return { data: acceptances };
   }
 
   @Post(':id/acceptances')
@@ -78,29 +72,11 @@ export class VendorAcceptancesController {
     @Param('id') vendorId: string,
     @Body() dto: CreateRiskAcceptanceDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const acceptance = await this.riskAcceptancesService.createForVendor(
+    return this.riskAcceptancesService.createForVendor(
       vendorId,
       organizationId,
       dto,
     );
-
-    return {
-      ...acceptance,
-      authType: authContext.authType,
-      ...this.authenticatedUser(authContext),
-    };
-  }
-
-  private authenticatedUser(authContext: AuthContextType) {
-    return authContext.userId && authContext.userEmail
-      ? {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }
-      : {};
   }
 }

@@ -34,7 +34,6 @@ import { QuestionnaireService } from './questionnaire.service';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { TrustAccessService } from '../trust-portal/trust-access.service';
-import type { AuthContext } from '../auth/types';
 
 describe('QuestionnaireController', () => {
   let controller: QuestionnaireController;
@@ -60,16 +59,6 @@ describe('QuestionnaireController', () => {
 
   const mockGuard = { canActivate: jest.fn().mockReturnValue(true) };
 
-  const mockAuthContext: AuthContext = {
-    organizationId: 'org_1',
-    authType: 'session',
-    isApiKey: false,
-    isPlatformAdmin: false,
-    userId: 'usr_1',
-    userEmail: 'test@example.com',
-    userRoles: ['owner'],
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [QuestionnaireController],
@@ -91,53 +80,32 @@ describe('QuestionnaireController', () => {
   });
 
   describe('findAll', () => {
-    it('should return list with count and auth context', async () => {
+    it('should return list with count', async () => {
       const mockData = [
         { id: 'q1', filename: 'test.pdf', questions: [] },
         { id: 'q2', filename: 'test2.xlsx', questions: [] },
       ];
       mockService.findAll.mockResolvedValue(mockData);
 
-      const result = await controller.findAll('org_1', mockAuthContext);
+      const result = await controller.findAll('org_1');
 
       expect(result.data).toEqual(mockData);
       expect(result.count).toBe(2);
-      expect(result.authType).toBe('session');
-      expect(result.authenticatedUser).toEqual({
-        id: 'usr_1',
-        email: 'test@example.com',
-      });
       expect(service.findAll).toHaveBeenCalledWith('org_1');
     });
 
     it('should return empty list when no questionnaires', async () => {
       mockService.findAll.mockResolvedValue([]);
 
-      const result = await controller.findAll('org_1', mockAuthContext);
+      const result = await controller.findAll('org_1');
 
       expect(result.data).toEqual([]);
       expect(result.count).toBe(0);
     });
-
-    it('should not include authenticatedUser for api-key auth', async () => {
-      const apiKeyContext: AuthContext = {
-        ...mockAuthContext,
-        userId: undefined,
-        userEmail: undefined,
-        authType: 'api-key',
-        isApiKey: true,
-      };
-      mockService.findAll.mockResolvedValue([]);
-
-      const result = await controller.findAll('org_1', apiKeyContext);
-
-      expect(result.authenticatedUser).toBeUndefined();
-      expect(result.authType).toBe('api-key');
-    });
   });
 
   describe('findById', () => {
-    it('should return questionnaire with auth context', async () => {
+    it('should return questionnaire', async () => {
       const mockQuestionnaire = {
         id: 'q1',
         filename: 'test.pdf',
@@ -145,23 +113,18 @@ describe('QuestionnaireController', () => {
       };
       mockService.findById.mockResolvedValue(mockQuestionnaire);
 
-      const result = await controller.findById('q1', 'org_1', mockAuthContext);
+      const result = await controller.findById('q1', 'org_1');
 
-      expect(result).toMatchObject({
-        id: 'q1',
-        filename: 'test.pdf',
-        authType: 'session',
-        authenticatedUser: { id: 'usr_1', email: 'test@example.com' },
-      });
+      expect(result).toMatchObject({ id: 'q1', filename: 'test.pdf' });
       expect(service.findById).toHaveBeenCalledWith('q1', 'org_1');
     });
 
     it('should throw NotFoundException when questionnaire not found', async () => {
       mockService.findById.mockResolvedValue(null);
 
-      await expect(
-        controller.findById('missing', 'org_1', mockAuthContext),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.findById('missing', 'org_1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -194,7 +157,7 @@ describe('QuestionnaireController', () => {
       };
       mockService.parseQuestionnaire.mockResolvedValue(expected);
 
-      const result = await controller.parseQuestionnaire(dto as any);
+      const result = await controller.parseQuestionnaire(dto);
 
       expect(result).toEqual(expected);
       expect(service.parseQuestionnaire).toHaveBeenCalledWith(dto);
@@ -218,7 +181,7 @@ describe('QuestionnaireController', () => {
         error: undefined,
       });
 
-      const result = await controller.answerSingleQuestion(dto as any, 'org_1');
+      const result = await controller.answerSingleQuestion(dto, 'org_1');
 
       expect(result.success).toBe(true);
       expect(result.data.answer).toBe('Our policy covers...');
@@ -242,7 +205,7 @@ describe('QuestionnaireController', () => {
         error: undefined,
       });
 
-      await controller.answerSingleQuestion(dto as any, 'org_1');
+      await controller.answerSingleQuestion(dto, 'org_1');
 
       expect(dto.organizationId).toBe('org_1');
       expect(service.answerSingleQuestion).toHaveBeenCalledWith(
@@ -292,7 +255,7 @@ describe('QuestionnaireController', () => {
       };
       mockService.deleteAnswer.mockResolvedValue({ success: true });
 
-      const result = await controller.deleteAnswer(dto as any, 'org_1');
+      const result = await controller.deleteAnswer(dto, 'org_1');
 
       expect(result).toEqual({ success: true });
     });
@@ -305,7 +268,7 @@ describe('QuestionnaireController', () => {
       };
       mockService.deleteAnswer.mockResolvedValue({ success: true });
 
-      await controller.deleteAnswer(dto as any, 'org_1');
+      await controller.deleteAnswer(dto, 'org_1');
 
       expect(dto.organizationId).toBe('org_1');
     });

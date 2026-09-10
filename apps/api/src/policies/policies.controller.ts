@@ -141,7 +141,6 @@ export class PoliciesController {
   @ApiResponse(GET_ALL_POLICIES_RESPONSES[401])
   async getAllPolicies(
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
     @Query('excludeContent') excludeContent?: string,
     @Query('includeArchived') includeArchived?: string,
   ) {
@@ -151,16 +150,7 @@ export class PoliciesController {
       includeArchived: includeArchived === 'true',
     });
 
-    return {
-      data: policies,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data: policies };
   }
 
   @Post('publish-all')
@@ -168,7 +158,6 @@ export class PoliciesController {
   @ApiOperation({ summary: 'Publish all draft policies' })
   async publishAllPolicies(
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
     @Req() req: AuthenticatedRequest,
   ) {
     // Resolve the acting user so per-policy audit rows are attributed correctly.
@@ -176,22 +165,11 @@ export class PoliciesController {
     // resolve to the key creator (else org owner) — without this, the granular
     // audit rows would be dropped for API-key auth (userId undefined).
     const acting = await this.actingUser.resolve(req, organizationId);
-    const data = await this.policiesService.publishAll(
+    return this.policiesService.publishAll(
       organizationId,
       acting.userId ?? undefined,
       acting.memberId ?? undefined,
     );
-
-    return {
-      ...data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
   }
 
   @Get('download-all')
@@ -213,26 +191,14 @@ export class PoliciesController {
   })
   async downloadAllPolicies(
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
     @Query('policyIds') policyIdsParam?: string | string[],
   ) {
     const policyIds = parsePolicyIdsParam(policyIdsParam);
 
-    const result = await this.policiesService.downloadAllPoliciesPdf(
+    return this.policiesService.downloadAllPoliciesPdf(
       organizationId,
       policyIds,
     );
-
-    return {
-      ...result,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
   }
 
   @Get(':id/controls')
@@ -242,7 +208,6 @@ export class PoliciesController {
   async getPolicyControls(
     @Param('id') id: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const controlSelect = {
       id: true,
@@ -315,13 +280,6 @@ export class PoliciesController {
     return {
       mappedControls: transform(policy?.controls ?? []),
       allControls: transform(allControls),
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
     };
   }
 
@@ -335,7 +293,6 @@ export class PoliciesController {
   async getPolicyEvidenceTasks(
     @Param('id') id: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const policy = await db.policy.findFirst({
       where: { id, organizationId, archivedAt: null },
@@ -379,17 +336,7 @@ export class PoliciesController {
       for (const task of group.tasks) uniqueTaskIds.add(task.id);
     }
 
-    return {
-      data,
-      count: uniqueTaskIds.size,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data, count: uniqueTaskIds.size };
   }
 
   @Post(':id/regenerate')
@@ -468,16 +415,7 @@ export class PoliciesController {
       scopes: { read: { runs: [handle.id] } },
     });
 
-    return {
-      data: { runId: handle.id, publicAccessToken },
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data: { runId: handle.id, publicAccessToken } };
   }
 
   @Get(':id/pdf/signed-url')
@@ -489,7 +427,6 @@ export class PoliciesController {
   async getPdfSignedUrl(
     @Param('id') id: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
     @Query('versionId') versionId?: string,
   ) {
     // Find the PDF URL from version or policy
@@ -518,16 +455,7 @@ export class PoliciesController {
     }
 
     if (!pdfUrl) {
-      return {
-        url: null,
-        authType: authContext.authType,
-        ...(authContext.userId && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-      };
+      return { url: null };
     }
 
     // Generate signed URL
@@ -552,16 +480,7 @@ export class PoliciesController {
     });
     const url = await getSignedUrl(s3, command, { expiresIn: 900 });
 
-    return {
-      url,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { url };
   }
 
   @Post(':id/pdf')
@@ -620,7 +539,6 @@ export class PoliciesController {
       fileData?: string;
     },
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     let fileBuffer: Buffer;
     let sanitizedFileName: string;
@@ -737,7 +655,7 @@ export class PoliciesController {
       }
     }
 
-    return { data: { s3Key }, authType: authContext.authType };
+    return { data: { s3Key } };
   }
 
   @Post(':id/pdf/upload-url')
@@ -755,24 +673,12 @@ export class PoliciesController {
     @Param('id') id: string,
     @Body() body: RequestPolicyPdfUploadUrlDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const data = await this.policiesService.generatePolicyPdfUploadUrl(
+    return this.policiesService.generatePolicyPdfUploadUrl(
       id,
       organizationId,
       body,
     );
-
-    return {
-      ...data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
   }
 
   @Post(':id/pdf/confirm')
@@ -789,24 +695,12 @@ export class PoliciesController {
     @Param('id') id: string,
     @Body() body: ConfirmPolicyPdfUploadedDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const data = await this.policiesService.confirmPolicyPdfUploaded(
+    return this.policiesService.confirmPolicyPdfUploaded(
       id,
       organizationId,
       body,
     );
-
-    return {
-      ...data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
   }
 
   @Delete(':id/pdf')
@@ -827,7 +721,6 @@ export class PoliciesController {
   async deletePolicyPdf(
     @Param('id') id: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
     @Query('versionId') versionId?: string,
   ) {
     const { S3Client, DeleteObjectCommand } =
@@ -902,16 +795,7 @@ export class PoliciesController {
       ]);
     }
 
-    return {
-      success: true,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { success: true };
   }
 
   @Get(':id/pdf-url')
@@ -922,7 +806,6 @@ export class PoliciesController {
   async getPdfUrl(
     @Param('id') id: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
     @Query('versionId') versionId?: string,
   ) {
     let pdfUrl: string | null = null;
@@ -973,7 +856,6 @@ export class PoliciesController {
     @Param('id') id: string,
     @Body() body: { controlIds: string[] },
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     await db.policy.update({
       where: { id, organizationId },
@@ -984,16 +866,7 @@ export class PoliciesController {
       },
     });
 
-    return {
-      success: true,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { success: true };
   }
 
   @Delete(':id/controls/:controlId')
@@ -1004,7 +877,6 @@ export class PoliciesController {
     @Param('id') id: string,
     @Param('controlId') controlId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     await db.$transaction(async (tx) => {
       // Disconnect the implicit m2m link (used by custom-framework/direct policy
@@ -1029,16 +901,7 @@ export class PoliciesController {
       });
     });
 
-    return {
-      success: true,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { success: true };
   }
 
   @Get(':id')
@@ -1052,20 +915,8 @@ export class PoliciesController {
   async getPolicy(
     @Param('id') id: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const policy = await this.policiesService.findById(id, organizationId);
-
-    return {
-      ...policy,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return this.policiesService.findById(id, organizationId);
   }
 
   @Post()
@@ -1078,23 +929,8 @@ export class PoliciesController {
   async createPolicy(
     @Body() createData: CreatePolicyDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const policy = await this.policiesService.create(
-      organizationId,
-      createData,
-    );
-
-    return {
-      ...policy,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return this.policiesService.create(organizationId, createData);
   }
 
   @Patch(':id')
@@ -1110,24 +946,8 @@ export class PoliciesController {
     @Param('id') id: string,
     @Body() updateData: UpdatePolicyDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const updatedPolicy = await this.policiesService.updateById(
-      id,
-      organizationId,
-      updateData,
-    );
-
-    return {
-      ...updatedPolicy,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return this.policiesService.updateById(id, organizationId, updateData);
   }
 
   @Delete(':id')
@@ -1140,20 +960,8 @@ export class PoliciesController {
   async deletePolicy(
     @Param('id') id: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const result = await this.policiesService.deleteById(id, organizationId);
-
-    return {
-      ...result,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return this.policiesService.deleteById(id, organizationId);
   }
 
   @Get(':id/versions')
@@ -1167,20 +975,9 @@ export class PoliciesController {
   async getPolicyVersions(
     @Param('id') id: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const data = await this.policiesService.getVersions(id, organizationId);
-
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data };
   }
 
   @Get(':id/versions/:versionId')
@@ -1196,24 +993,13 @@ export class PoliciesController {
     @Param('id') id: string,
     @Param('versionId') versionId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const data = await this.policiesService.getVersionById(
       id,
       versionId,
       organizationId,
     );
-
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data };
   }
 
   @Post(':id/versions')
@@ -1239,16 +1025,7 @@ export class PoliciesController {
       authContext.userId,
     );
 
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data };
   }
 
   @Patch(':id/versions/:versionId')
@@ -1267,7 +1044,6 @@ export class PoliciesController {
     @Param('versionId') versionId: string,
     @Req() req: { body: { content?: unknown[] } },
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     // Use req.body directly to avoid class-transformer mangling TipTap JSON
     const data = await this.policiesService.updateVersionContent(
@@ -1277,16 +1053,7 @@ export class PoliciesController {
       { content: req.body.content ?? [] },
     );
 
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data };
   }
 
   @Delete(':id/versions/:versionId')
@@ -1302,24 +1069,13 @@ export class PoliciesController {
     @Param('id') id: string,
     @Param('versionId') versionId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const data = await this.policiesService.deleteVersion(
       id,
       versionId,
       organizationId,
     );
-
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data };
   }
 
   @Post(':id/versions/publish')
@@ -1345,16 +1101,7 @@ export class PoliciesController {
       authContext.userId,
     );
 
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data };
   }
 
   @Post(':id/versions/:versionId/activate')
@@ -1370,24 +1117,13 @@ export class PoliciesController {
     @Param('id') id: string,
     @Param('versionId') versionId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const data = await this.policiesService.setActiveVersion(
       id,
       versionId,
       organizationId,
     );
-
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data };
   }
 
   @Post(':id/versions/:versionId/submit-for-approval')
@@ -1406,7 +1142,6 @@ export class PoliciesController {
     @Param('versionId') versionId: string,
     @Body() body: SubmitForApprovalDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const data = await this.policiesService.submitForApproval(
       id,
@@ -1414,17 +1149,7 @@ export class PoliciesController {
       organizationId,
       body,
     );
-
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data };
   }
 
   @Post(':id/accept-changes')
@@ -1447,16 +1172,7 @@ export class PoliciesController {
       authContext.userId,
     );
 
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data };
   }
 
   @Post(':id/deny-changes')
@@ -1467,24 +1183,13 @@ export class PoliciesController {
     @Param('id') id: string,
     @Body() body: { approverId: string; comment?: string },
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
     const data = await this.policiesService.denyChanges(
       id,
       organizationId,
       body,
     );
-
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data };
   }
 
   @Post(':id/ai-chat')

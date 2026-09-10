@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import type { AuthContext } from '../auth/types';
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { VendorAcceptancesController } from './vendor-acceptances.controller';
@@ -27,17 +26,6 @@ describe('VendorAcceptancesController', () => {
   };
 
   const orgId = 'org_test123';
-
-  const authContext: AuthContext = {
-    organizationId: orgId,
-    authType: 'session',
-    isApiKey: false,
-    isPlatformAdmin: false,
-    userRoles: ['admin'],
-    userId: 'usr_123',
-    userEmail: 'admin@example.com',
-    memberId: 'mem_123',
-  };
 
   const acceptanceView = {
     id: 'rska_1',
@@ -80,18 +68,13 @@ describe('VendorAcceptancesController', () => {
       acceptances: [acceptanceView],
     });
 
-    const result = await controller.listVendorAcceptances(
-      'vnd_1',
-      orgId,
-      authContext,
-    );
+    const result = await controller.listVendorAcceptances('vnd_1', orgId);
 
     expect(acceptancesService.listForVendor).toHaveBeenCalledWith(
       'vnd_1',
       orgId,
     );
     expect(result.data).toEqual([acceptanceView]);
-    expect(result.authType).toBe('session');
   });
 
   it('records a vendor acceptance and returns the created event', async () => {
@@ -101,7 +84,6 @@ describe('VendorAcceptancesController', () => {
       'vnd_1',
       { acceptedById: 'mem_123' },
       orgId,
-      authContext,
     );
 
     expect(acceptancesService.createForVendor).toHaveBeenCalledWith(

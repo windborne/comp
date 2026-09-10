@@ -739,17 +739,7 @@ export class TasksController {
       for (const policy of group.policies) uniquePolicyIds.add(policy.id);
     }
 
-    return {
-      data,
-      count: uniquePolicyIds.size,
-      authType: authContext.authType,
-      ...(authContext.userId && {
-        authenticatedUser: {
-          id: authContext.userId,
-          email: authContext.userEmail,
-        },
-      }),
-    };
+    return { data, count: uniquePolicyIds.size };
   }
 
   @Get(':taskId/activity')

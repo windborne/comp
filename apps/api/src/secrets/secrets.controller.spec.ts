@@ -17,7 +17,6 @@ jest.mock('@trycompai/auth', () => ({
 
 import { HybridAuthGuard } from '../auth/hybrid-auth.guard';
 import { PermissionGuard, PERMISSIONS_KEY } from '../auth/permission.guard';
-import type { AuthContext } from '../auth/types';
 import { SecretsController } from './secrets.controller';
 import { SecretsService } from './secrets.service';
 
@@ -34,16 +33,6 @@ describe('SecretsController', () => {
   };
 
   const mockGuard = { canActivate: jest.fn().mockReturnValue(true) };
-
-  const mockAuthContext: AuthContext = {
-    organizationId: 'org_123',
-    authType: 'session',
-    isApiKey: false,
-    isPlatformAdmin: false,
-    userId: 'usr_123',
-    userEmail: 'test@example.com',
-    userRoles: ['admin'],
-  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -70,32 +59,10 @@ describe('SecretsController', () => {
       ];
       mockSecretsService.listSecrets.mockResolvedValue(secrets);
 
-      const result = await controller.listSecrets('org_123', mockAuthContext);
+      const result = await controller.listSecrets('org_123');
 
       expect(secretsService.listSecrets).toHaveBeenCalledWith('org_123');
-      expect(result).toEqual({
-        data: secrets,
-        count: 2,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
-    });
-
-    it('should not include authenticatedUser when userId is missing', async () => {
-      const noUserContext: AuthContext = {
-        ...mockAuthContext,
-        userId: undefined,
-        userEmail: undefined,
-      };
-      mockSecretsService.listSecrets.mockResolvedValue([]);
-
-      const result = await controller.listSecrets('org_123', noUserContext);
-
-      expect(result).toEqual({
-        data: [],
-        count: 0,
-        authType: 'session',
-      });
+      expect(result).toEqual({ data: secrets, count: 2 });
     });
   });
 
@@ -104,18 +71,10 @@ describe('SecretsController', () => {
       const secret = { id: 'sec_1', name: 'API_KEY', value: 'decrypted' };
       mockSecretsService.getSecret.mockResolvedValue(secret);
 
-      const result = await controller.getSecret(
-        'sec_1',
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.getSecret('sec_1', 'org_123');
 
       expect(secretsService.getSecret).toHaveBeenCalledWith('sec_1', 'org_123');
-      expect(result).toEqual({
-        secret,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual({ secret });
     });
   });
 
@@ -129,18 +88,10 @@ describe('SecretsController', () => {
       const created = { id: 'sec_3', ...body };
       mockSecretsService.createSecret.mockResolvedValue(created);
 
-      const result = await controller.createSecret(
-        body,
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.createSecret(body, 'org_123');
 
       expect(secretsService.createSecret).toHaveBeenCalledWith('org_123', body);
-      expect(result).toEqual({
-        secret: created,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual({ secret: created });
     });
   });
 
@@ -150,23 +101,14 @@ describe('SecretsController', () => {
       const updated = { id: 'sec_1', ...body };
       mockSecretsService.updateSecret.mockResolvedValue(updated);
 
-      const result = await controller.updateSecret(
-        'sec_1',
-        body,
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.updateSecret('sec_1', body, 'org_123');
 
       expect(secretsService.updateSecret).toHaveBeenCalledWith(
         'sec_1',
         'org_123',
         body,
       );
-      expect(result).toEqual({
-        secret: updated,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual({ secret: updated });
     });
   });
 
@@ -175,21 +117,13 @@ describe('SecretsController', () => {
       const deleteResult = { success: true };
       mockSecretsService.deleteSecret.mockResolvedValue(deleteResult);
 
-      const result = await controller.deleteSecret(
-        'sec_1',
-        'org_123',
-        mockAuthContext,
-      );
+      const result = await controller.deleteSecret('sec_1', 'org_123');
 
       expect(secretsService.deleteSecret).toHaveBeenCalledWith(
         'sec_1',
         'org_123',
       );
-      expect(result).toEqual({
-        success: true,
-        authType: 'session',
-        authenticatedUser: { id: 'usr_123', email: 'test@example.com' },
-      });
+      expect(result).toEqual({ success: true });
     });
   });
 

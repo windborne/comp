@@ -78,14 +78,6 @@ export class RisksController {
       totalCount: result.totalCount,
       page: result.page,
       pageCount: result.pageCount,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
     };
   }
 
@@ -93,46 +85,18 @@ export class RisksController {
   @UseGuards(PermissionGuard)
   @RequirePermission('risk', 'read')
   @ApiOperation({ summary: 'Get risk statistics grouped by assignee' })
-  async getStatsByAssignee(
-    @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
-  ) {
+  async getStatsByAssignee(@OrganizationId() organizationId: string) {
     const data = await this.risksService.getStatsByAssignee(organizationId);
-
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data };
   }
 
   @Get('stats/by-department')
   @UseGuards(PermissionGuard)
   @RequirePermission('risk', 'read')
   @ApiOperation({ summary: 'Get risk counts grouped by department' })
-  async getStatsByDepartment(
-    @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
-  ) {
+  async getStatsByDepartment(@OrganizationId() organizationId: string) {
     const data = await this.risksService.getStatsByDepartment(organizationId);
-
-    return {
-      data,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return { data };
   }
 
   @Get(':id')
@@ -161,17 +125,7 @@ export class RisksController {
       throw new ForbiddenException('You do not have access to this risk');
     }
 
-    return {
-      ...risk,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return risk;
   }
 
   @Post()
@@ -187,21 +141,8 @@ export class RisksController {
   async createRisk(
     @Body() createRiskDto: CreateRiskDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const risk = await this.risksService.create(organizationId, createRiskDto);
-
-    return {
-      ...risk,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.risksService.create(organizationId, createRiskDto);
   }
 
   @Patch(':id')
@@ -219,25 +160,8 @@ export class RisksController {
     @Param('id') riskId: string,
     @Body() updateRiskDto: UpdateRiskDto,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const updatedRisk = await this.risksService.updateById(
-      riskId,
-      organizationId,
-      updateRiskDto,
-    );
-
-    return {
-      ...updatedRisk,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.risksService.updateById(riskId, organizationId, updateRiskDto);
   }
 
   @Delete(':id')
@@ -252,20 +176,7 @@ export class RisksController {
   async deleteRisk(
     @Param('id') riskId: string,
     @OrganizationId() organizationId: string,
-    @AuthContext() authContext: AuthContextType,
   ) {
-    const result = await this.risksService.deleteById(riskId, organizationId);
-
-    return {
-      ...result,
-      authType: authContext.authType,
-      ...(authContext.userId &&
-        authContext.userEmail && {
-          authenticatedUser: {
-            id: authContext.userId,
-            email: authContext.userEmail,
-          },
-        }),
-    };
+    return this.risksService.deleteById(riskId, organizationId);
   }
 }

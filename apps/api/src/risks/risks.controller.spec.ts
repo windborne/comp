@@ -155,7 +155,7 @@ describe('RisksController', () => {
       );
     });
 
-    it('should return paginated data with auth info', async () => {
+    it('should return paginated data', async () => {
       risksService.findAllByOrganization.mockResolvedValue(
         paginatedResult as unknown as Awaited<
           ReturnType<typeof risksService.findAllByOrganization>
@@ -169,25 +169,7 @@ describe('RisksController', () => {
         totalCount: 1,
         page: 1,
         pageCount: 1,
-        authType: 'session',
-        authenticatedUser: {
-          id: 'usr_123',
-          email: 'admin@example.com',
-        },
       });
-    });
-
-    it('should omit authenticatedUser when userId is not present', async () => {
-      risksService.findAllByOrganization.mockResolvedValue(
-        paginatedResult as unknown as Awaited<
-          ReturnType<typeof risksService.findAllByOrganization>
-        >,
-      );
-
-      const result = await controller.getAllRisks({}, orgId, authContextNoUser);
-
-      expect(result.authType).toBe('api-key');
-      expect(result).not.toHaveProperty('authenticatedUser');
     });
 
     it('should pass assignment filter from buildRiskAssignmentFilter', async () => {
@@ -225,35 +207,17 @@ describe('RisksController', () => {
     it('should call getStatsByAssignee with organizationId', async () => {
       risksService.getStatsByAssignee.mockResolvedValue(statsData);
 
-      await controller.getStatsByAssignee(orgId, authContext);
+      await controller.getStatsByAssignee(orgId);
 
       expect(risksService.getStatsByAssignee).toHaveBeenCalledWith(orgId);
     });
 
-    it('should return data with auth info', async () => {
+    it('should return data', async () => {
       risksService.getStatsByAssignee.mockResolvedValue(statsData);
 
-      const result = await controller.getStatsByAssignee(orgId, authContext);
+      const result = await controller.getStatsByAssignee(orgId);
 
-      expect(result).toEqual({
-        data: statsData,
-        authType: 'session',
-        authenticatedUser: {
-          id: 'usr_123',
-          email: 'admin@example.com',
-        },
-      });
-    });
-
-    it('should omit authenticatedUser for API key auth', async () => {
-      risksService.getStatsByAssignee.mockResolvedValue(statsData);
-
-      const result = await controller.getStatsByAssignee(
-        orgId,
-        authContextNoUser,
-      );
-
-      expect(result).not.toHaveProperty('authenticatedUser');
+      expect(result).toEqual({ data: statsData });
     });
   });
 
@@ -270,28 +234,21 @@ describe('RisksController', () => {
         >,
       );
 
-      await controller.getStatsByDepartment(orgId, authContext);
+      await controller.getStatsByDepartment(orgId);
 
       expect(risksService.getStatsByDepartment).toHaveBeenCalledWith(orgId);
     });
 
-    it('should return data with auth info', async () => {
+    it('should return data', async () => {
       risksService.getStatsByDepartment.mockResolvedValue(
         deptStats as unknown as Awaited<
           ReturnType<typeof risksService.getStatsByDepartment>
         >,
       );
 
-      const result = await controller.getStatsByDepartment(orgId, authContext);
+      const result = await controller.getStatsByDepartment(orgId);
 
-      expect(result).toEqual({
-        data: deptStats,
-        authType: 'session',
-        authenticatedUser: {
-          id: 'usr_123',
-          email: 'admin@example.com',
-        },
-      });
+      expect(result).toEqual({ data: deptStats });
     });
   });
 
@@ -308,7 +265,7 @@ describe('RisksController', () => {
       expect(risksService.findById).toHaveBeenCalledWith('risk_1', orgId);
     });
 
-    it('should return risk with auth info', async () => {
+    it('should return risk', async () => {
       risksService.findById.mockResolvedValue(
         mockRisk as unknown as Awaited<
           ReturnType<typeof risksService.findById>
@@ -317,14 +274,7 @@ describe('RisksController', () => {
 
       const result = await controller.getRiskById('risk_1', orgId, authContext);
 
-      expect(result).toEqual({
-        ...mockRisk,
-        authType: 'session',
-        authenticatedUser: {
-          id: 'usr_123',
-          email: 'admin@example.com',
-        },
-      });
+      expect(result).toEqual(mockRisk);
     });
 
     it('should check hasRiskAccess and throw ForbiddenException if denied', async () => {
@@ -377,41 +327,19 @@ describe('RisksController', () => {
         mockRisk as unknown as Awaited<ReturnType<typeof risksService.create>>,
       );
 
-      await controller.createRisk(createDto, orgId, authContext);
+      await controller.createRisk(createDto, orgId);
 
       expect(risksService.create).toHaveBeenCalledWith(orgId, createDto);
     });
 
-    it('should return created risk with auth info', async () => {
+    it('should return created risk', async () => {
       risksService.create.mockResolvedValue(
         mockRisk as unknown as Awaited<ReturnType<typeof risksService.create>>,
       );
 
-      const result = await controller.createRisk(createDto, orgId, authContext);
+      const result = await controller.createRisk(createDto, orgId);
 
-      expect(result).toEqual({
-        ...mockRisk,
-        authType: 'session',
-        authenticatedUser: {
-          id: 'usr_123',
-          email: 'admin@example.com',
-        },
-      });
-    });
-
-    it('should omit authenticatedUser for API key auth', async () => {
-      risksService.create.mockResolvedValue(
-        mockRisk as unknown as Awaited<ReturnType<typeof risksService.create>>,
-      );
-
-      const result = await controller.createRisk(
-        createDto,
-        orgId,
-        authContextNoUser,
-      );
-
-      expect(result).not.toHaveProperty('authenticatedUser');
-      expect(result.authType).toBe('api-key');
+      expect(result).toEqual(mockRisk);
     });
   });
 
@@ -426,7 +354,7 @@ describe('RisksController', () => {
         >,
       );
 
-      await controller.updateRisk('risk_1', updateDto, orgId, authContext);
+      await controller.updateRisk('risk_1', updateDto, orgId);
 
       expect(risksService.updateById).toHaveBeenCalledWith(
         'risk_1',
@@ -435,28 +363,16 @@ describe('RisksController', () => {
       );
     });
 
-    it('should return updated risk with auth info', async () => {
+    it('should return updated risk', async () => {
       risksService.updateById.mockResolvedValue(
         updatedRisk as unknown as Awaited<
           ReturnType<typeof risksService.updateById>
         >,
       );
 
-      const result = await controller.updateRisk(
-        'risk_1',
-        updateDto,
-        orgId,
-        authContext,
-      );
+      const result = await controller.updateRisk('risk_1', updateDto, orgId);
 
-      expect(result).toEqual({
-        ...updatedRisk,
-        authType: 'session',
-        authenticatedUser: {
-          id: 'usr_123',
-          email: 'admin@example.com',
-        },
-      });
+      expect(result).toEqual(updatedRisk);
     });
   });
 
@@ -469,37 +385,17 @@ describe('RisksController', () => {
     it('should call deleteById with correct parameters', async () => {
       risksService.deleteById.mockResolvedValue(deleteResult);
 
-      await controller.deleteRisk('risk_1', orgId, authContext);
+      await controller.deleteRisk('risk_1', orgId);
 
       expect(risksService.deleteById).toHaveBeenCalledWith('risk_1', orgId);
     });
 
-    it('should return delete result with auth info', async () => {
+    it('should return delete result', async () => {
       risksService.deleteById.mockResolvedValue(deleteResult);
 
-      const result = await controller.deleteRisk('risk_1', orgId, authContext);
+      const result = await controller.deleteRisk('risk_1', orgId);
 
-      expect(result).toEqual({
-        ...deleteResult,
-        authType: 'session',
-        authenticatedUser: {
-          id: 'usr_123',
-          email: 'admin@example.com',
-        },
-      });
-    });
-
-    it('should omit authenticatedUser for API key auth', async () => {
-      risksService.deleteById.mockResolvedValue(deleteResult);
-
-      const result = await controller.deleteRisk(
-        'risk_1',
-        orgId,
-        authContextNoUser,
-      );
-
-      expect(result).not.toHaveProperty('authenticatedUser');
+      expect(result).toEqual(deleteResult);
     });
   });
-
 });
