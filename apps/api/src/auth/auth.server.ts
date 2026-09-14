@@ -27,6 +27,7 @@ import {
   resolveMicrosoftEmail,
   type MicrosoftEmailClaims,
 } from './microsoft-email';
+import { resolveCookieDomain } from './cookie-domain';
 import {
   getBetterAuthTrustedOrigins,
   isStaticTrustedOrigin,
@@ -45,21 +46,6 @@ export {
 } from './origin-policy';
 
 const MAGIC_LINK_EXPIRES_IN_SECONDS = 60 * 60; // 1 hour
-
-/**
- * Determine the cookie domain based on environment.
- */
-function getCookieDomain(): string | undefined {
-  const baseUrl = process.env.BASE_URL || '';
-
-  if (baseUrl.includes('staging.trycomp.ai')) {
-    return '.staging.trycomp.ai';
-  }
-  if (baseUrl.includes('trycomp.ai')) {
-    return '.trycomp.ai';
-  }
-  return undefined;
-}
 
 // ── Custom domain lookup via Redis cache ─────────────────────────────────────
 
@@ -170,7 +156,7 @@ if (
   };
 }
 
-const cookieDomain = getCookieDomain();
+const cookieDomain = resolveCookieDomain();
 
 // ── Hosted MCP (Speakeasy Gram) OAuth ────────────────────────────────────────
 // The MCP server is hosted on Gram. Gram obtains an OAuth access token from this
