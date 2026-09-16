@@ -1,3 +1,4 @@
+import { env } from '@/env.mjs';
 import type { SsoProvider } from '@/hooks/use-sso-providers';
 import { serverApi } from '@/lib/api-server';
 import { requireRoutePermission } from '@/lib/permissions.server';
@@ -10,7 +11,9 @@ export default async function SsoSettingsPage({ params }: { params: Promise<{ or
 
   const res = await serverApi.get<{ data: SsoProvider[] }>('/v1/organization/sso-providers');
 
-  return <SsoSettings initialProviders={res.data?.data ?? []} />;
+  return (
+    <SsoSettings initialProviders={res.data?.data ?? []} portalUrl={env.NEXT_PUBLIC_PORTAL_URL} />
+  );
 }
 
 export async function generateMetadata(): Promise<Metadata> {

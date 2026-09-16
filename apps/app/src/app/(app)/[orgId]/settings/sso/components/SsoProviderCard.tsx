@@ -1,6 +1,7 @@
 'use client';
 
 import { useSsoProviders, type SsoProvider } from '@/hooks/use-sso-providers';
+import { buildSsoDeepLink } from '@/lib/sso-deep-link';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +18,7 @@ import {
   Text,
 } from '@trycompai/design-system';
 import { TrashCan } from '@trycompai/design-system/icons';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { toast } from 'sonner';
 import { CopyValue } from './CopyValue';
 import { DomainVerificationPanel } from './DomainVerificationPanel';
@@ -36,10 +37,14 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
 interface SsoProviderCardProps {
   provider: SsoProvider;
   canManage: boolean;
+  portalUrl?: string;
 }
 
-export function SsoProviderCard({ provider, canManage }: SsoProviderCardProps) {
+export function SsoProviderCard({ provider, canManage, portalUrl }: SsoProviderCardProps) {
   const { deleteProvider } = useSsoProviders();
+  // The app's own origin is only known in the browser (self-hosted domains vary).
+  const [appOrigin, setAppOrigin] = useState('');
+  useEffect(() => setAppOrigin(window.location.origin), []);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -93,6 +98,34 @@ export function SsoProviderCard({ provider, canManage }: SsoProviderCardProps) {
           <DetailRow label="Redirect URI">
             <CopyValue value={provider.redirectUri} label="Redirect URI" />
           </DetailRow>
+        </Stack>
+
+        <Stack gap="sm">
+          <Stack gap="xs">
+            <Text size="sm" weight="medium">
+              Sign-in links
+            </Text>
+            <Text size="xs" variant="muted">
+              Use these as the app URL in your identity provider&apos;s launcher so a tile starts
+              single sign-on directly.
+            </Text>
+          </Stack>
+          {appOrigin && (
+            <DetailRow label="App">
+              <CopyValue
+                value={buildSsoDeepLink({ origin: appOrigin, providerId: provider.providerId })}
+                label="App sign-in link"
+              />
+            </DetailRow>
+          )}
+          {portalUrl && (
+            <DetailRow label="Employee portal">
+              <CopyValue
+                value={buildSsoDeepLink({ origin: portalUrl, providerId: provider.providerId })}
+                label="Portal sign-in link"
+              />
+            </DetailRow>
+          )}
         </Stack>
 
         {!provider.domainVerified && (

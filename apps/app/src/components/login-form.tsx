@@ -20,6 +20,8 @@ interface LoginFormProps {
   showMicrosoft: boolean;
   /** Mapped copy for an `?error=` code reported by better-auth (see lib/auth-errors). */
   errorMessage?: string | null;
+  /** `/auth?sso=<provider-id>`: start single sign-on with this provider right away. */
+  ssoProviderId?: string;
 }
 
 export function LoginForm({
@@ -29,6 +31,7 @@ export function LoginForm({
   showGithub,
   showMicrosoft,
   errorMessage,
+  ssoProviderId,
 }: LoginFormProps) {
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [magicLinkState, setMagicLinkState] = useState({ sent: false, email: '' });
@@ -60,7 +63,9 @@ export function LoginForm({
     );
   }
 
-  const preferredSignInOption = showGoogle ? (
+  const preferredSignInOption = ssoProviderId ? (
+    <SsoSignIn inviteCode={inviteCode} redirectTo={redirectTo} providerId={ssoProviderId} />
+  ) : showGoogle ? (
     <GoogleSignIn inviteCode={inviteCode} redirectTo={redirectTo} />
   ) : (
     <MagicLinkSignIn
@@ -72,7 +77,12 @@ export function LoginForm({
   );
 
   const moreOptionsList = [];
-  if (showGoogle) {
+  if (ssoProviderId && showGoogle) {
+    moreOptionsList.push(
+      <GoogleSignIn key="google" inviteCode={inviteCode} redirectTo={redirectTo} />,
+    );
+  }
+  if (ssoProviderId || showGoogle) {
     moreOptionsList.push(
       <MagicLinkSignIn
         key="secondary-magic"
@@ -94,7 +104,9 @@ export function LoginForm({
   }
   // Single sign-on is configured per organization (Settings → Single sign-on),
   // so it is always offered; the API decides from the email domain.
-  moreOptionsList.push(<SsoSignIn key="sso" inviteCode={inviteCode} redirectTo={redirectTo} />);
+  if (!ssoProviderId) {
+    moreOptionsList.push(<SsoSignIn key="sso" inviteCode={inviteCode} redirectTo={redirectTo} />);
+  }
 
   return (
     <div className="space-y-4">

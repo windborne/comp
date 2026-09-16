@@ -89,6 +89,16 @@ describe('SsoSettings permission gating', () => {
     expect(screen.getByTestId('domain-verification-panel')).toBeInTheDocument();
   });
 
+  it('shows the launcher deep links for the app and the portal', () => {
+    setMockPermissions(ADMIN_PERMISSIONS);
+    render(
+      <SsoSettings initialProviders={[verifiedProvider]} portalUrl="https://portal.example.com" />,
+    );
+
+    expect(screen.getByText(`${window.location.origin}/auth?sso=acme`)).toBeInTheDocument();
+    expect(screen.getByText('https://portal.example.com/auth?sso=acme')).toBeInTheDocument();
+  });
+
   it('renders an empty state without an add button for users who cannot manage SSO', () => {
     setMockPermissions({});
     render(<SsoSettings initialProviders={[]} />);

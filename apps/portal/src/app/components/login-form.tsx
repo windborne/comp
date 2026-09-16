@@ -10,9 +10,17 @@ interface LoginFormProps {
   showGoogle: boolean;
   showMicrosoft: boolean;
   showSso: boolean;
+  /** `/auth?sso=<provider-id>`: start single sign-on with this provider right away. */
+  ssoProviderId?: string;
 }
 
-export function LoginForm({ inviteCode, showGoogle, showMicrosoft, showSso }: LoginFormProps) {
+export function LoginForm({
+  inviteCode,
+  showGoogle,
+  showMicrosoft,
+  showSso,
+  ssoProviderId,
+}: LoginFormProps) {
   const searchParams = useSearchParams();
 
   if (!showGoogle && !showMicrosoft && !showSso) {
@@ -37,7 +45,11 @@ export function LoginForm({ inviteCode, showGoogle, showMicrosoft, showSso }: Lo
           <MicrosoftSignIn inviteCode={inviteCode} searchParams={searchParams as URLSearchParams} />
         )}
         {showSso && (
-          <SsoSignIn inviteCode={inviteCode} searchParams={searchParams as URLSearchParams} />
+          <SsoSignIn
+            inviteCode={inviteCode}
+            searchParams={searchParams as URLSearchParams}
+            providerId={ssoProviderId}
+          />
         )}
       </div>
     </div>

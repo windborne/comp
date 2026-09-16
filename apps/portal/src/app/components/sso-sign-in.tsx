@@ -9,7 +9,7 @@ import { Enterprise } from '@trycompai/design-system/icons';
 import { Button } from '@trycompai/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@trycompai/ui/form';
 import { Input } from '@trycompai/ui/input';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -22,45 +22,70 @@ type SsoFormValues = z.infer<typeof formSchema>;
 
 /**
  * "Continue with single sign-on" for the employee portal. The API resolves
- * the organization's identity provider from the email domain and redirects
- * the browser there; failures come back to /auth as `?error=`.
+ * the organization's identity provider from the email domain (or starts with
+ * a specific provider for `/auth?sso=<provider-id>` launcher links) and
+ * redirects the browser there; failures come back to /auth as `?error=`.
  */
 export function SsoSignIn({
   inviteCode,
   searchParams,
+  providerId,
 }: {
   inviteCode?: string;
   searchParams?: URLSearchParams;
+  providerId?: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const autoStarted = useRef(false);
 
   const form = useForm<SsoFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: '' },
   });
 
-  const handleSubmit = async ({ email }: SsoFormValues) => {
-    setIsLoading(true);
+  const startSignIn = useCallback(
+    async (target: { email: string } | { providerId: string }) => {
+      setIsLoading(true);
 
-    const { callbackURL, errorCallbackURL } = buildSignInCallbackUrls({
-      origin: window.location.origin,
-      inviteCode,
-      searchParams,
-    });
+      const { callbackURL, errorCallbackURL } = buildSignInCallbackUrls({
+        origin: window.location.origin,
+        inviteCode,
+        searchParams,
+      });
 
-    const { error } = await authClient.signIn.sso({
-      email,
-      callbackURL,
-      errorCallbackURL,
-    });
+      const { error } = await authClient.signIn.sso({
+        ...target,
+        callbackURL,
+        errorCallbackURL,
+      });
 
-    if (error) {
-      toast.error(getSsoSignInErrorMessage(error));
-      setIsLoading(false);
-    }
-    // On success better-auth redirects the browser to the identity provider.
-  };
+      if (error) {
+        toast.error(getSsoSignInErrorMessage(error));
+        setIsLoading(false);
+        setIsOpen(true);
+      }
+      // On success better-auth redirects the browser to the identity provider.
+    },
+    [inviteCode, searchParams],
+  );
+
+  useEffect(() => {
+    if (!providerId || autoStarted.current) return;
+    autoStarted.current = true;
+    void startSignIn({ providerId });
+  }, [providerId, startSignIn]);
+
+  const handleSubmit = ({ email }: SsoFormValues) => startSignIn({ email });
+
+  if (providerId && !isOpen) {
+    return (
+      <Button type="button" className="w-full h-11 font-medium" variant="outline" disabled>
+        <Spinner size="sm" />
+        Redirecting to your identity provider…
+      </Button>
+    );
+  }
 
   if (!isOpen) {
     return (

@@ -95,6 +95,17 @@ provider.
   </Step>
 </Steps>
 
+## Starting sign-in from your identity provider
+
+OpenID Connect has no standard "IdP-initiated" flow: a launcher tile that sends people straight to
+the callback URL fails with a missing `state` error. Point the tile at the sign-in deep link
+instead, which starts single sign-on for that provider immediately:
+
+- App: `https://<your-app-host>/auth?sso=<provider-id>`
+- Employee portal: `https://<your-portal-host>/auth?sso=<provider-id>`
+
+Both links are shown on the provider card under **Settings → Single sign-on**.
+
 ## Security model
 
 - **Domain ownership is required.** A provider can only sign people in once its domain is verified,
