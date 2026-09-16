@@ -1,5 +1,7 @@
 import { LoginForm } from '@/app/components/login-form';
 import { OtpSignIn } from '@/app/components/otp';
+import { getAuthErrorMessage } from '@/app/lib/auth-errors';
+import { Alert } from '@trycompai/design-system';
 import { Button } from '@trycompai/ui/button';
 import {
   Card,
@@ -43,6 +45,11 @@ export default async function Page({
   // Use optional env vars to explicitly disable them on the portal if needed.
   const showGoogle = process.env.PORTAL_DISABLE_GOOGLE_SIGN_IN !== 'true';
   const showMicrosoft = process.env.PORTAL_DISABLE_MICROSOFT_SIGN_IN !== 'true';
+  // Single sign-on is configured per organization in the app; the API resolves
+  // the provider from the email domain.
+  const showSso = process.env.PORTAL_DISABLE_SSO_SIGN_IN !== 'true';
+  // OAuth/SSO callbacks report failures here as ?error=<code>.
+  const errorMessage = getAuthErrorMessage(params.error);
 
   return (
     <div className="flex min-h-dvh flex-col text-foreground">
@@ -58,8 +65,11 @@ export default async function Page({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pb-6">
+            {errorMessage && (
+              <Alert variant="destructive" title="Sign-in failed" description={errorMessage} />
+            )}
             {defaultSignInOptions}
-            <LoginForm showGoogle={showGoogle} showMicrosoft={showMicrosoft} />
+            <LoginForm showGoogle={showGoogle} showMicrosoft={showMicrosoft} showSso={showSso} />
           </CardContent>
           <CardFooter className="pb-10">
             <div className="from-primary/10 via-primary/5 to-primary/5 rounded-sm bg-gradient-to-r p-4">

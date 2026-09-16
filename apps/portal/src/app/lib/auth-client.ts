@@ -1,3 +1,4 @@
+import { ssoClient } from '@better-auth/sso/client';
 import {
   emailOTPClient,
   multiSessionClient,
@@ -12,6 +13,8 @@ export const authClient = createAuthClient({
     organizationClient({ ac, roles: allRoles }),
     emailOTPClient(),
     multiSessionClient(),
+    // OIDC single sign-on (`authClient.signIn.sso`), configured per org in the app.
+    ssoClient(),
   ],
 });
 

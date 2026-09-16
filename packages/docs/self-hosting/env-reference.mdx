@@ -52,6 +52,7 @@ These variables are required for a functional Docker deployment:
 | `AUTH_MICROSOFT_CLIENT_ID` | app | runtime | conditional | Microsoft/Entra OAuth client ID |
 | `AUTH_MICROSOFT_CLIENT_SECRET` | app | runtime | conditional | Microsoft/Entra OAuth client secret |
 | `AUTH_MICROSOFT_TENANT_ID` | app | runtime | optional | `common` (default), `organizations`, or tenant GUID to restrict login |
+| `PORTAL_DISABLE_SSO_SIGN_IN` | portal | runtime | optional | Set to `true` to hide "Continue with single sign-on" on the portal login page. SSO providers themselves are configured per organization in the app |
 
 ### Email
 

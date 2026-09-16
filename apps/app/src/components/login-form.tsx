@@ -4,6 +4,8 @@ import { GithubSignIn } from '@/components/github-sign-in';
 import { GoogleSignIn } from '@/components/google-sign-in';
 import { MagicLinkSignIn } from '@/components/magic-link';
 import { MicrosoftSignIn } from '@/components/microsoft-sign-in';
+import { SsoSignIn } from '@/components/sso-sign-in';
+import { Alert } from '@trycompai/design-system';
 import { Button } from '@trycompai/ui/button';
 import { Card, CardContent, CardDescription, CardTitle } from '@trycompai/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@trycompai/ui/collapsible';
@@ -16,6 +18,8 @@ interface LoginFormProps {
   showGoogle: boolean;
   showGithub: boolean;
   showMicrosoft: boolean;
+  /** Mapped copy for an `?error=` code reported by better-auth (see lib/auth-errors). */
+  errorMessage?: string | null;
 }
 
 export function LoginForm({
@@ -24,6 +28,7 @@ export function LoginForm({
   showGoogle,
   showGithub,
   showMicrosoft,
+  errorMessage,
 }: LoginFormProps) {
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [magicLinkState, setMagicLinkState] = useState({ sent: false, email: '' });
@@ -87,9 +92,16 @@ export function LoginForm({
       <GithubSignIn key="github" inviteCode={inviteCode} redirectTo={redirectTo} />,
     );
   }
+  // Single sign-on is configured per organization (Settings → Single sign-on),
+  // so it is always offered; the API decides from the email domain.
+  moreOptionsList.push(<SsoSignIn key="sso" inviteCode={inviteCode} redirectTo={redirectTo} />);
 
   return (
     <div className="space-y-4">
+      {errorMessage && (
+        <Alert variant="destructive" title="Sign-in failed" description={errorMessage} />
+      )}
+
       {preferredSignInOption}
 
       {moreOptionsList.length > 0 && (
