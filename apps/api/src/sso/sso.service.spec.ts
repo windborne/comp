@@ -14,6 +14,11 @@ const mockRequestDomainVerification = jest.fn();
 const mockVerifyDomain = jest.fn();
 const mockUpdate = jest.fn();
 const mockDelete = jest.fn();
+const mockDiscover = jest.fn();
+jest.mock('./sso-discovery', () => ({
+  discoverOidcEndpoints: (...args: unknown[]) => mockDiscover(...args),
+}));
+
 jest.mock('../auth/auth.server', () => ({
   auth: {
     api: {
@@ -28,6 +33,7 @@ jest.mock('../auth/auth.server', () => ({
 }));
 
 import {
+  BadRequestException,
   ConflictException,
   HttpException,
   NotFoundException,
@@ -56,6 +62,15 @@ const acmeRow = {
   updatedAt: new Date('2026-09-15T00:00:00.000Z'),
 };
 
+const discoveredEndpoints = {
+  discoveryEndpoint: 'https://login.acme.com/.well-known/openid-configuration',
+  authorizationEndpoint: 'https://login.acme.com/authorize',
+  tokenEndpoint: 'https://login.acme.com/token',
+  jwksEndpoint: 'https://login.acme.com/jwks',
+  userInfoEndpoint: 'https://login.acme.com/userinfo',
+  tokenEndpointAuthentication: 'client_secret_basic' as const,
+};
+
 const createDto = {
   providerId: 'acme',
   issuer: 'https://login.acme.com',
@@ -72,6 +87,7 @@ describe('SsoService', () => {
     process.env.BASE_URL = 'https://api.trycomp.ai';
     mockFindMany.mockResolvedValue([]);
     mockFindFirst.mockResolvedValue(acmeRow);
+    mockDiscover.mockResolvedValue(discoveredEndpoints);
   });
 
   describe('listProviders', () => {
@@ -113,7 +129,8 @@ describe('SsoService', () => {
           oidcConfig: {
             clientId: 'cid',
             clientSecret: 'shh',
-            discoveryEndpoint: undefined,
+            skipDiscovery: true,
+            ...discoveredEndpoints,
             scopes: ['openid', 'profile', 'email'],
             pkce: true,
           },
@@ -125,6 +142,36 @@ describe('SsoService', () => {
         recordValue: 'tok',
       });
       expect(result.domainVerified).toBe(false);
+    });
+
+    it('discovers the provider endpoints itself so public IdPs need no trusted-origins entry', async () => {
+      mockRegister.mockResolvedValue({ domainVerificationToken: 'tok' });
+
+      await service.createProvider({
+        organizationId: ORG,
+        headers,
+        dto: createDto,
+      });
+
+      expect(mockDiscover).toHaveBeenCalledWith({
+        issuer: 'https://login.acme.com',
+        discoveryEndpoint: undefined,
+      });
+    });
+
+    it('does not register anything when discovery fails', async () => {
+      mockDiscover.mockRejectedValue(
+        new BadRequestException('OpenID Connect discovery failed'),
+      );
+
+      await expect(
+        service.createProvider({
+          organizationId: ORG,
+          headers,
+          dto: createDto,
+        }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(mockRegister).not.toHaveBeenCalled();
     });
 
     it('refuses a domain (or subdomain) already registered by another provider', async () => {

@@ -127,6 +127,7 @@ Google, Microsoft) or through a newly registered provider.
 
 - The **redirect URI** is served by the API (`BASE_URL`), so the API host must be reachable from
   users' browsers and the API must be able to reach the identity provider.
-- Identity providers on **private networks** are rejected by default. Add the provider's origin to
+- Any identity provider reachable over public HTTPS works without extra configuration. Providers on
+  **private networks** (or plain HTTP) are rejected by default: add the provider's origin to
   `AUTH_TRUSTED_ORIGINS` on the API to allow it.
 - Set `PORTAL_DISABLE_SSO_SIGN_IN=true` on the portal to hide the single sign-on option there.
