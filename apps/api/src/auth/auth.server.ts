@@ -32,6 +32,13 @@ import {
   getBetterAuthTrustedOrigins,
   isStaticTrustedOrigin,
 } from './origin-policy';
+import { isSsoCallbackRequest } from './sso/sso-domain';
+import {
+  createSsoAccountCreateHook,
+  createSsoUserCreateHook,
+  prismaSsoHookDeps,
+} from './sso/sso-hooks';
+import { createSsoPlugin } from './sso/sso-plugin';
 
 export {
   getBetterAuthTrustedOrigins,
@@ -255,7 +262,11 @@ export const auth = betterAuth({
   },
   emailVerification: {
     sendOnSignUp: true,
-    sendVerificationEmail: async ({ user, url }) => {
+    sendVerificationEmail: async ({ user, url }, request) => {
+      // SSO sign-ups are asserted by the org's identity provider for a domain
+      // the org proved it owns (see ./sso), so the user is already verified —
+      // a "verify your email" mail would only confuse a new employee.
+      if (isSsoCallbackRequest(request)) return;
       if (process.env.NODE_ENV === 'development') {
         console.log('[Auth] Sending verification email to:', user.email);
       }
@@ -290,6 +301,14 @@ export const auth = betterAuth({
     }),
   },
   databaseHooks: {
+    // Single sign-on: refuse identities outside the provider's verified domain
+    // before the user/account rows exist. See ./sso/sso-hooks.ts.
+    user: {
+      create: { before: createSsoUserCreateHook(prismaSsoHookDeps) },
+    },
+    account: {
+      create: { before: createSsoAccountCreateHook(prismaSsoHookDeps) },
+    },
     session: {
       create: {
         before: async (session) => {
@@ -507,6 +526,9 @@ export const auth = betterAuth({
     admin({
       defaultRole: 'user',
     }),
+    // OIDC single sign-on for the app + employee portal. Providers are managed
+    // per organization via apps/api/src/sso; see ./sso/sso-plugin.ts.
+    createSsoPlugin(),
     // OAuth 2.0 / OIDC provider for hosted MCP (Gram). Wraps oidcProvider and
     // exposes /api/auth/mcp/* (authorize, token, register) + the two
     // /api/auth/.well-known/* discovery docs, plus the auth.api.getMcpSession()

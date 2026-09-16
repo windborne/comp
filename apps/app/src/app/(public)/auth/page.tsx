@@ -1,5 +1,6 @@
 import { LoginForm } from '@/components/login-form';
 import { env } from '@/env.mjs';
+import { getAuthErrorMessage } from '@/lib/auth-errors';
 import { auth } from '@/utils/auth';
 import { getSafeRedirectPath } from '@/utils/auth-callback';
 import {
@@ -23,13 +24,15 @@ export const metadata: Metadata = {
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ inviteCode?: string; redirectTo?: string }>;
+  searchParams: Promise<{ inviteCode?: string; redirectTo?: string; error?: string }>;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
-  const { inviteCode, redirectTo } = await searchParams;
+  const { inviteCode, redirectTo, error } = await searchParams;
   const safeRedirectTo = getSafeRedirectPath(redirectTo);
+  // OAuth/SSO callbacks report failures here as ?error=<code>.
+  const errorMessage = getAuthErrorMessage(error);
 
   const orgId = session?.session?.activeOrganizationId;
 
@@ -68,6 +71,7 @@ export default async function Page({
               showGoogle={showGoogle}
               showGithub={showGithub}
               showMicrosoft={showMicrosoft}
+              errorMessage={errorMessage}
             />
           </CardContent>
           <CardFooter className="pb-10">

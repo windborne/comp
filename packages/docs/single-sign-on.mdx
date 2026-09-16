@@ -1,0 +1,132 @@
+---
+title: 'Single Sign-On (OIDC)'
+description: 'Let your team sign in to Comp AI and the employee portal with your identity provider'
+---
+
+Comp AI supports single sign-on (SSO) through **OpenID Connect (OIDC)**, so your team can sign in to
+the compliance app and the employee portal with the identity provider you already use — Okta,
+Microsoft Entra ID, Google Workspace, JumpCloud, OneLogin, Keycloak, and any other OIDC-compliant
+provider.
+
+## How it works
+
+- An organization admin registers the identity provider under **Settings → Single sign-on** and
+  proves ownership of the organization's email domain with a DNS record.
+- People pick **Continue with single sign-on** on the app or portal login page and enter their work
+  email. The email domain selects the provider, so the same flow serves both apps.
+- People who don't have a Comp AI account yet are created on first sign-in and added to your
+  organization with the **employee** role, which gives them access to the employee portal (policies,
+  training, device agent). Admins grant app access from the **People** page as usual.
+- People who already have a Comp AI account (for example, they previously signed in with Google) are
+  linked to the provider on their first SSO sign-in — as long as their email is under your verified
+  domain.
+
+<Note>
+  Single sign-on only adds people through SSO sign-ins. Signing in with Google or Microsoft using an
+  email under your domain does not add anyone to your organization.
+</Note>
+
+## Prerequisites
+
+- You are an **owner** or **admin** of the organization in Comp AI.
+- You can create an OIDC application in your identity provider.
+- You can add a DNS TXT record for your email domain.
+
+## Set up single sign-on
+
+<Steps>
+  <Step title="Create an OIDC application in your identity provider">
+    Create a **Web** application using the **Authorization Code** flow. Configure:
+
+    - **Redirect / sign-in URI**: `https://<your-api-host>/api/auth/sso/callback/<provider-id>`. The
+      exact value is shown in Comp AI once you pick a provider ID (for example
+      `https://api.trycomp.ai/api/auth/sso/callback/acme`).
+    - **Scopes**: `openid`, `profile`, `email`.
+    - **Grant type**: authorization code, with PKCE where available.
+
+    Note the **issuer URL**, **client ID** and **client secret** the provider gives you.
+
+    | Provider | Issuer URL |
+    | --- | --- |
+    | Okta | `https://<your-org>.okta.com` (or your custom authorization server) |
+    | Microsoft Entra ID | `https://login.microsoftonline.com/<tenant-id>/v2.0` |
+    | Google Workspace | `https://accounts.google.com` |
+    | Keycloak | `https://<host>/realms/<realm>` |
+
+  </Step>
+
+  <Step title="Register the provider in Comp AI">
+    In the app, open **Settings → Single sign-on** and click **Add provider**. Enter:
+
+    - **Provider ID** — a short slug such as `acme`. It becomes part of the redirect URI and the DNS
+      record and cannot be changed later.
+    - **Issuer URL** — Comp AI fetches the provider's discovery document
+      (`/.well-known/openid-configuration`) to validate the configuration.
+    - **Email domain** — the domain of your team's work emails (for example `acme.com`). Separate
+      several domains with commas.
+    - **Client ID** and **Client secret** from step 1.
+
+    The client secret is stored for the token exchange and never shown again.
+
+  </Step>
+
+  <Step title="Verify your email domain">
+    After saving, Comp AI shows a DNS **TXT** record:
+
+    ```
+    Name:  _compai-sso-<provider-id>.<your-domain>
+    Value: <verification token>
+    ```
+
+    Add it at your DNS provider, wait for it to propagate (usually minutes, up to an hour), then
+    click **Verify domain** on the provider card. If you registered several domains, add the same
+    record under each of them.
+
+    <Warning>
+      Sign-in through the provider stays disabled until the domain is verified. Verification is
+      what prevents someone else from registering your domain and signing in as your users.
+    </Warning>
+
+  </Step>
+
+  <Step title="Sign in">
+    On the app or portal login page, choose **Continue with single sign-on**, enter a work email
+    under the verified domain and complete sign-in with your identity provider.
+  </Step>
+</Steps>
+
+## Security model
+
+- **Domain ownership is required.** A provider can only sign people in once its domain is verified,
+  and only for email addresses under that domain. Identities the provider asserts for other domains
+  are rejected before any account is created or linked.
+- **Existing accounts are linked safely.** An SSO identity is linked to an existing Comp AI account
+  only when the email matches the provider's verified domain.
+- **Deactivated members stay deactivated.** Signing in through SSO never re-activates an offboarded
+  member.
+- **Secrets are never returned.** The API omits the client secret from every response and redacts
+  it from audit logs.
+
+## Removing a provider
+
+Removing a provider deletes it together with the SSO links of everyone who signed in through it.
+People keep their Comp AI accounts and memberships and can sign in with another method (magic link,
+Google, Microsoft) or through a newly registered provider.
+
+## Troubleshooting
+
+| Message on the login page                                                                    | What it means                                                                                                                                 |
+| -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| No single sign-on provider is set up for this email domain                                   | No verified provider matches the email domain. Check the domain on the provider card.                                                         |
+| Single sign-on for this email domain has not been verified yet                               | Add the DNS TXT record and click **Verify domain**.                                                                                           |
+| This email already has a Comp AI account that cannot be linked…                              | The existing account's email is not under the provider's verified domain, or has never been verified. Sign in with the previous method first. |
+| Your identity provider returned an email address outside your organization's verified domain | The provider asserted an email for another domain. Check the user's primary email in the provider.                                            |
+| Your identity provider returned an error                                                     | The token exchange failed. Confirm the redirect URI, client ID and secret in the provider match Comp AI.                                      |
+
+## Self-hosting notes
+
+- The **redirect URI** is served by the API (`BASE_URL`), so the API host must be reachable from
+  users' browsers and the API must be able to reach the identity provider.
+- Identity providers on **private networks** are rejected by default. Add the provider's origin to
+  `AUTH_TRUSTED_ORIGINS` on the API to allow it.
+- Set `PORTAL_DISABLE_SSO_SIGN_IN=true` on the portal to hide the single sign-on option there.

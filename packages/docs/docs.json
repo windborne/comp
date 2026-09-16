@@ -71,6 +71,7 @@
               "automated-evidence",
               "browser-automations",
               "device-agent",
+              "single-sign-on",
               "security-questionnaire",
               "security-questionnaire-extension",
               "penetration-tests",

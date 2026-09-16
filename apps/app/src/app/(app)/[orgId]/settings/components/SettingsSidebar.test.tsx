@@ -25,6 +25,18 @@ describe('SettingsSidebar', () => {
     expect(screen.queryByRole('link', { name: 'Billing' })).not.toBeInTheDocument();
   });
 
+  it('lists Single sign-on right after Roles', () => {
+    render(<SettingsSidebar orgId="org-1" showBillingTab={false} showBrowserTab={false} />);
+
+    const links = screen.getAllByRole('link').map((link) => link.textContent);
+    const rolesIndex = links.indexOf('Roles');
+    expect(links[rolesIndex + 1]).toBe('Single sign-on');
+    expect(screen.getByRole('link', { name: 'Single sign-on' })).toHaveAttribute(
+      'href',
+      '/org-1/settings/sso',
+    );
+  });
+
   it('hides Browser even when the browser tab flag is enabled', () => {
     render(<SettingsSidebar orgId="org-1" showBillingTab={true} showBrowserTab={true} />);
 

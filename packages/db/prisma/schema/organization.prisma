@@ -116,6 +116,9 @@ model Organization {
   organizationRoles        OrganizationRole[]
   roleNotificationSettings RoleNotificationSetting[]
 
+  // Single sign-on (OIDC) identity providers registered by this org
+  ssoProviders SsoProvider[]
+
   // Timeline
   timelineInstances TimelineInstance[]
 

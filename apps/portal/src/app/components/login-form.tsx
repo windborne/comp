@@ -3,17 +3,19 @@
 import { useSearchParams } from 'next/navigation';
 import { GoogleSignIn } from './google-sign-in';
 import { MicrosoftSignIn } from './microsoft-sign-in';
+import { SsoSignIn } from './sso-sign-in';
 
 interface LoginFormProps {
   inviteCode?: string;
   showGoogle: boolean;
   showMicrosoft: boolean;
+  showSso: boolean;
 }
 
-export function LoginForm({ inviteCode, showGoogle, showMicrosoft }: LoginFormProps) {
+export function LoginForm({ inviteCode, showGoogle, showMicrosoft, showSso }: LoginFormProps) {
   const searchParams = useSearchParams();
 
-  if (!showGoogle && !showMicrosoft) {
+  if (!showGoogle && !showMicrosoft && !showSso) {
     return;
   }
 
@@ -33,6 +35,9 @@ export function LoginForm({ inviteCode, showGoogle, showMicrosoft }: LoginFormPr
         )}
         {showMicrosoft && (
           <MicrosoftSignIn inviteCode={inviteCode} searchParams={searchParams as URLSearchParams} />
+        )}
+        {showSso && (
+          <SsoSignIn inviteCode={inviteCode} searchParams={searchParams as URLSearchParams} />
         )}
       </div>
     </div>

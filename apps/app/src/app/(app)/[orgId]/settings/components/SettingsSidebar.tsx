@@ -33,6 +33,7 @@ export function SettingsSidebar({ orgId, showBrowserTab, showBillingTab }: Setti
     { id: 'portal', label: 'Portal', path: `/${orgId}/settings/portal` },
     { id: 'secrets', label: 'Secrets', path: `/${orgId}/settings/secrets` },
     { id: 'roles', label: 'Roles', path: `/${orgId}/settings/roles` },
+    { id: 'sso', label: 'Single sign-on', path: `/${orgId}/settings/sso` },
     { id: 'notifications', label: 'Notifications', path: `/${orgId}/settings/notifications` },
     {
       id: 'browser',

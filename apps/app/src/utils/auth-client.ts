@@ -1,3 +1,4 @@
+import { ssoClient } from '@better-auth/sso/client';
 import {
   adminClient,
   emailOTPClient,
@@ -32,6 +33,9 @@ export const authClient = createAuthClient({
     emailOTPClient(),
     magicLinkClient(),
     multiSessionClient(),
+    // OIDC single sign-on (`authClient.signIn.sso`) — providers are managed
+    // per organization under Settings → Single sign-on.
+    ssoClient(),
   ],
   // Authentication is handled via httpOnly cookies - no localStorage tokens needed
 });

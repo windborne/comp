@@ -16,6 +16,7 @@ import { awsConfig } from './config/aws.config';
 import { betterAuthConfig } from './config/better-auth.config';
 import { HealthModule } from './health/health.module';
 import { OrganizationModule } from './organization/organization.module';
+import { SsoModule } from './sso/sso.module';
 import { OrganizationAccessModule } from './organization-access/organization-access.module';
 import { PoliciesModule } from './policies/policies.module';
 import { RisksModule } from './risks/risks.module';
@@ -83,6 +84,7 @@ import { OffboardingChecklistModule } from './offboarding-checklist/offboarding-
     ]),
     AuthModule,
     OrganizationModule,
+    SsoModule,
     OrganizationAccessModule,
     PeopleModule,
     RisksModule,

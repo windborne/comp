@@ -36,6 +36,7 @@ model User {
   oauthAccessTokens OauthAccessToken[]
   oauthConsents     OauthConsent[]
   mcpOrgBinding     McpOrgBinding?
+  ssoProviders      SsoProvider[]
 
   @@unique([email])
 }
@@ -177,6 +178,34 @@ model McpOrgBinding {
 
   @@index([organizationId])
   @@map("mcp_org_binding")
+}
+
+// ── SSO providers — required by the @better-auth/sso plugin (OIDC single sign-on).
+// One row per identity provider an organization registers. `oidcConfig` is the
+// JSON better-auth reads at sign-in time (it carries the IdP client secret, as
+// better-auth does for every provider it manages), so it is never returned by
+// the API — see apps/api/src/sso. `domainVerified` flips to true once the org
+// proves ownership of `domain` via a DNS TXT record; sign-in is refused until then.
+// Field names MUST match better-auth's expected schema (providerId, oidcConfig, …).
+model SsoProvider {
+  id             String        @id @default(dbgenerated("generate_prefixed_cuid('sso'::text)"))
+  providerId     String        @unique
+  issuer         String
+  domain         String
+  domainVerified Boolean       @default(false)
+  oidcConfig     String?       @db.Text
+  samlConfig     String?       @db.Text
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId])
+  @@index([domain])
+  @@index([userId])
+  @@map("sso_provider")
 }
 
 // JWT Plugin - Required by Better Auth JWT plugin
