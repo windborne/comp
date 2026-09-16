@@ -8,6 +8,7 @@ import { db } from '@db';
 import { auth } from '../auth/auth.server';
 import { domainMatches, parseProviderDomains } from '../auth/sso/sso-domain';
 import { callBetterAuth } from './better-auth-call';
+import { discoverOidcEndpoints } from './sso-discovery';
 import {
   CreateSsoProviderDto,
   SSO_DEFAULT_SCOPES,
@@ -72,6 +73,13 @@ export class SsoService {
     const domain = normalizeDomainList(dto.domain);
     await this.assertDomainsAvailable({ domain });
 
+    // Discovery runs here (public IdPs need no trusted-origins entry) and the
+    // endpoints are handed to better-auth verbatim — see ./sso-discovery.ts.
+    const endpoints = await discoverOidcEndpoints({
+      issuer: dto.issuer,
+      discoveryEndpoint: dto.discoveryEndpoint,
+    });
+
     const registered = await callBetterAuth(() =>
       auth.api.registerSSOProvider({
         headers,
@@ -83,7 +91,8 @@ export class SsoService {
           oidcConfig: {
             clientId: dto.clientId,
             clientSecret: dto.clientSecret,
-            discoveryEndpoint: dto.discoveryEndpoint,
+            skipDiscovery: true,
+            ...endpoints,
             scopes: dto.scopes ?? SSO_DEFAULT_SCOPES,
             pkce: dto.pkce ?? true,
           },

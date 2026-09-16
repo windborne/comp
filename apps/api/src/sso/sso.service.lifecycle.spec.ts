@@ -14,6 +14,8 @@ const mockRequestDomainVerification = jest.fn();
 const mockVerifyDomain = jest.fn();
 const mockUpdate = jest.fn();
 const mockDelete = jest.fn();
+jest.mock('./sso-discovery', () => ({ discoverOidcEndpoints: jest.fn() }));
+
 jest.mock('../auth/auth.server', () => ({
   auth: {
     api: {
