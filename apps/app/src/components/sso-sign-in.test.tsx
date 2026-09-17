@@ -69,4 +69,27 @@ describe('SsoSignIn', () => {
     await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
     expect(mockToastError.mock.calls[0][0]).toMatch(/No single sign-on provider is set up/);
   });
+
+  it('starts sign-in immediately for a provider deep link without asking for an email', async () => {
+    render(<SsoSignIn providerId="windborne" />);
+
+    expect(screen.getByText(/redirecting to your identity provider/i)).toBeInTheDocument();
+    await waitFor(() => expect(mockSignInSso).toHaveBeenCalledTimes(1));
+    const call = mockSignInSso.mock.calls[0][0] as { providerId?: string; email?: string };
+    expect(call.providerId).toBe('windborne');
+    expect(call.email).toBeUndefined();
+    expect(screen.queryByPlaceholderText('name@company.com')).not.toBeInTheDocument();
+  });
+
+  it('falls back to the email form when the deep-linked provider cannot be used', async () => {
+    mockSignInSso.mockResolvedValue({
+      data: null,
+      error: { status: 401, message: 'Provider domain has not been verified' },
+    });
+    render(<SsoSignIn providerId="windborne" />);
+
+    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+    expect(mockToastError.mock.calls[0][0]).toMatch(/not been verified/);
+    expect(screen.getByPlaceholderText('name@company.com')).toBeInTheDocument();
+  });
 });

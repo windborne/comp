@@ -20,9 +20,11 @@ import { SsoProviderCard } from './SsoProviderCard';
 
 interface SsoSettingsProps {
   initialProviders: SsoProvider[];
+  /** Public URL of the employee portal, for the launcher links on each card. */
+  portalUrl?: string;
 }
 
-export function SsoSettings({ initialProviders }: SsoSettingsProps) {
+export function SsoSettings({ initialProviders, portalUrl }: SsoSettingsProps) {
   const { providers } = useSsoProviders({ initialData: initialProviders });
   const { hasPermission } = usePermissions();
   const canManage = hasPermission('organization', 'update');
@@ -67,7 +69,12 @@ export function SsoSettings({ initialProviders }: SsoSettingsProps) {
       ) : (
         <Stack gap="md">
           {providers.map((provider) => (
-            <SsoProviderCard key={provider.id} provider={provider} canManage={canManage} />
+            <SsoProviderCard
+              key={provider.id}
+              provider={provider}
+              canManage={canManage}
+              portalUrl={portalUrl}
+            />
           ))}
         </Stack>
       )}

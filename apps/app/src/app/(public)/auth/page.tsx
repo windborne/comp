@@ -1,6 +1,7 @@
 import { LoginForm } from '@/components/login-form';
 import { env } from '@/env.mjs';
 import { getAuthErrorMessage } from '@/lib/auth-errors';
+import { parseSsoProviderIdParam } from '@/lib/sso-deep-link';
 import { auth } from '@/utils/auth';
 import { getSafeRedirectPath } from '@/utils/auth-callback';
 import {
@@ -24,15 +25,17 @@ export const metadata: Metadata = {
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ inviteCode?: string; redirectTo?: string; error?: string }>;
+  searchParams: Promise<{ inviteCode?: string; redirectTo?: string; error?: string; sso?: string }>;
 }) {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
-  const { inviteCode, redirectTo, error } = await searchParams;
+  const { inviteCode, redirectTo, error, sso } = await searchParams;
   const safeRedirectTo = getSafeRedirectPath(redirectTo);
   // OAuth/SSO callbacks report failures here as ?error=<code>.
   const errorMessage = getAuthErrorMessage(error);
+  // Identity-provider launcher tiles link here as ?sso=<provider-id>.
+  const ssoProviderId = parseSsoProviderIdParam(sso);
 
   const orgId = session?.session?.activeOrganizationId;
 
@@ -72,6 +75,7 @@ export default async function Page({
               showGithub={showGithub}
               showMicrosoft={showMicrosoft}
               errorMessage={errorMessage}
+              ssoProviderId={ssoProviderId}
             />
           </CardContent>
           <CardFooter className="pb-10">

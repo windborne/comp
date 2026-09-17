@@ -9,7 +9,7 @@ import { Enterprise } from '@trycompai/design-system/icons';
 import { Button } from '@trycompai/ui/button';
 import { Form, FormControl, FormField, FormItem, FormMessage } from '@trycompai/ui/form';
 import { Input } from '@trycompai/ui/input';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -23,6 +23,11 @@ type SsoFormValues = z.infer<typeof formSchema>;
 interface SsoSignInProps {
   inviteCode?: string;
   redirectTo?: string;
+  /**
+   * Start sign-in with this provider immediately (`/auth?sso=<provider-id>`),
+   * the entry point for identity-provider launcher tiles.
+   */
+  providerId?: string;
 }
 
 /**
@@ -31,30 +36,53 @@ interface SsoSignInProps {
  * hands the browser to that provider. Errors on the way back land on /auth
  * as `?error=` and are rendered by the login form.
  */
-export function SsoSignIn({ inviteCode, redirectTo }: SsoSignInProps) {
+export function SsoSignIn({ inviteCode, redirectTo, providerId }: SsoSignInProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const autoStarted = useRef(false);
 
   const form = useForm<SsoFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: '' },
   });
 
-  const handleSubmit = async ({ email }: SsoFormValues) => {
-    setIsLoading(true);
+  const startSignIn = useCallback(
+    async (target: { email: string } | { providerId: string }) => {
+      setIsLoading(true);
 
-    const { error } = await authClient.signIn.sso({
-      email,
-      callbackURL: buildAuthCallbackUrl({ inviteCode, redirectTo }),
-      errorCallbackURL: `${window.location.origin}/auth`,
-    });
+      const { error } = await authClient.signIn.sso({
+        ...target,
+        callbackURL: buildAuthCallbackUrl({ inviteCode, redirectTo }),
+        errorCallbackURL: `${window.location.origin}/auth`,
+      });
 
-    if (error) {
-      toast.error(getSsoSignInErrorMessage(error));
-      setIsLoading(false);
-    }
-    // On success better-auth redirects the browser to the identity provider.
-  };
+      if (error) {
+        toast.error(getSsoSignInErrorMessage(error));
+        setIsLoading(false);
+        // Let the user retry by email if the deep link's provider is unusable.
+        setIsOpen(true);
+      }
+      // On success better-auth redirects the browser to the identity provider.
+    },
+    [inviteCode, redirectTo],
+  );
+
+  useEffect(() => {
+    if (!providerId || autoStarted.current) return;
+    autoStarted.current = true;
+    void startSignIn({ providerId });
+  }, [providerId, startSignIn]);
+
+  const handleSubmit = ({ email }: SsoFormValues) => startSignIn({ email });
+
+  if (providerId && !isOpen) {
+    return (
+      <Button type="button" className="w-full h-11 font-medium" variant="outline" disabled>
+        <Spinner size="sm" />
+        Redirecting to your identity provider…
+      </Button>
+    );
+  }
 
   if (!isOpen) {
     return (

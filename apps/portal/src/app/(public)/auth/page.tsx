@@ -1,7 +1,9 @@
 import { LoginForm } from '@/app/components/login-form';
 import { OtpSignIn } from '@/app/components/otp';
 import { getAuthErrorMessage } from '@/app/lib/auth-errors';
+import { parseSsoProviderIdParam } from '@/app/lib/sso-deep-link';
 import { Alert } from '@trycompai/design-system';
+import { ArrowRight } from '@trycompai/design-system/icons';
 import { Button } from '@trycompai/ui/button';
 import {
   Card,
@@ -12,7 +14,6 @@ import {
   CardTitle,
 } from '@trycompai/ui/card';
 import { Icons } from '@trycompai/ui/icons';
-import { ArrowRight } from '@trycompai/design-system/icons';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -50,6 +51,8 @@ export default async function Page({
   const showSso = process.env.PORTAL_DISABLE_SSO_SIGN_IN !== 'true';
   // OAuth/SSO callbacks report failures here as ?error=<code>.
   const errorMessage = getAuthErrorMessage(params.error);
+  // Identity-provider launcher tiles link here as ?sso=<provider-id>.
+  const ssoProviderId = parseSsoProviderIdParam(params.sso);
 
   return (
     <div className="flex min-h-dvh flex-col text-foreground">
@@ -69,7 +72,12 @@ export default async function Page({
               <Alert variant="destructive" title="Sign-in failed" description={errorMessage} />
             )}
             {defaultSignInOptions}
-            <LoginForm showGoogle={showGoogle} showMicrosoft={showMicrosoft} showSso={showSso} />
+            <LoginForm
+              showGoogle={showGoogle}
+              showMicrosoft={showMicrosoft}
+              showSso={showSso}
+              ssoProviderId={ssoProviderId}
+            />
           </CardContent>
           <CardFooter className="pb-10">
             <div className="from-primary/10 via-primary/5 to-primary/5 rounded-sm bg-gradient-to-r p-4">
