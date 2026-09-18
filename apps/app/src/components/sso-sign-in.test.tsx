@@ -92,4 +92,40 @@ describe('SsoSignIn', () => {
     expect(mockToastError.mock.calls[0][0]).toMatch(/not been verified/);
     expect(screen.getByPlaceholderText('name@company.com')).toBeInTheDocument();
   });
+
+  it('lets the parent control whether the email form is open', () => {
+    const onOpenChange = vi.fn();
+    const { rerender } = render(<SsoSignIn open={false} onOpenChange={onOpenChange} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /continue with single sign-on/i }));
+    expect(onOpenChange).toHaveBeenCalledWith(true);
+    // Controlled: nothing opens until the parent says so.
+    expect(screen.queryByPlaceholderText('name@company.com')).not.toBeInTheDocument();
+
+    rerender(<SsoSignIn open onOpenChange={onOpenChange} />);
+    expect(screen.getByPlaceholderText('name@company.com')).toBeInTheDocument();
+  });
+
+  it('shows the idle button, not "Redirecting…", once a failed deep link is dismissed', async () => {
+    mockSignInSso.mockResolvedValue({
+      data: null,
+      error: { status: 401, message: 'Provider domain has not been verified' },
+    });
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <SsoSignIn providerId="windborne" open={false} onOpenChange={onOpenChange} />,
+    );
+
+    expect(screen.getByText(/redirecting to your identity provider/i)).toBeInTheDocument();
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(true));
+
+    rerender(<SsoSignIn providerId="windborne" open onOpenChange={onOpenChange} />);
+    expect(screen.getByPlaceholderText('name@company.com')).toBeInTheDocument();
+
+    rerender(<SsoSignIn providerId="windborne" open={false} onOpenChange={onOpenChange} />);
+    expect(
+      screen.getByRole('button', { name: /continue with single sign-on/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/redirecting to your identity provider/i)).not.toBeInTheDocument();
+  });
 });
