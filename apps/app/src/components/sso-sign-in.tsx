@@ -28,6 +28,13 @@ interface SsoSignInProps {
    * the entry point for identity-provider launcher tiles.
    */
   providerId?: string;
+  /**
+   * Whether the email form is showing. Omit to let the component manage it;
+   * pass it together with `onOpenChange` when the parent has to react, e.g.
+   * to hide a neighbouring email field while this form is open.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -36,15 +43,31 @@ interface SsoSignInProps {
  * hands the browser to that provider. Errors on the way back land on /auth
  * as `?error=` and are rendered by the login form.
  */
-export function SsoSignIn({ inviteCode, redirectTo, providerId }: SsoSignInProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+export function SsoSignIn({
+  inviteCode,
+  redirectTo,
+  providerId,
+  open,
+  onOpenChange,
+}: SsoSignInProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isOpen = open ?? uncontrolledOpen;
+  // A deep link starts redirecting as soon as the component mounts.
+  const [isLoading, setIsLoading] = useState(Boolean(providerId));
   const autoStarted = useRef(false);
 
   const form = useForm<SsoFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: '' },
   });
+
+  const setIsOpen = useCallback(
+    (next: boolean) => {
+      setUncontrolledOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
 
   const startSignIn = useCallback(
     async (target: { email: string } | { providerId: string }) => {
@@ -64,7 +87,7 @@ export function SsoSignIn({ inviteCode, redirectTo, providerId }: SsoSignInProps
       }
       // On success better-auth redirects the browser to the identity provider.
     },
-    [inviteCode, redirectTo],
+    [inviteCode, redirectTo, setIsOpen],
   );
 
   useEffect(() => {
@@ -74,10 +97,11 @@ export function SsoSignIn({ inviteCode, redirectTo, providerId }: SsoSignInProps
   }, [providerId, startSignIn]);
 
   const handleSubmit = ({ email }: SsoFormValues) => startSignIn({ email });
+  const handleOpen = () => setIsOpen(true);
 
-  if (providerId && !isOpen) {
+  if (isLoading && !isOpen) {
     return (
-      <Button type="button" className="w-full h-11 font-medium" variant="outline" disabled>
+      <Button type="button" className="w-full h-11 font-medium" variant="default" disabled>
         <Spinner size="sm" />
         Redirecting to your identity provider…
       </Button>
@@ -88,9 +112,9 @@ export function SsoSignIn({ inviteCode, redirectTo, providerId }: SsoSignInProps
     return (
       <Button
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={handleOpen}
         className="w-full h-11 font-medium"
-        variant="outline"
+        variant="default"
       >
         <Enterprise size={16} />
         Continue with single sign-on
@@ -130,7 +154,7 @@ export function SsoSignIn({ inviteCode, redirectTo, providerId }: SsoSignInProps
         <Button
           type="submit"
           className="w-full h-11 font-medium"
-          variant="outline"
+          variant="default"
           disabled={isLoading}
         >
           {isLoading ? (
