@@ -20,6 +20,26 @@ const formSchema = z.object({
 
 type SsoFormValues = z.infer<typeof formSchema>;
 
+interface SsoSignInProps {
+  inviteCode?: string;
+  searchParams?: URLSearchParams;
+  /** Start sign-in with this provider immediately (`/auth?sso=<provider-id>`). */
+  providerId?: string;
+  /**
+   * Whether the email form is showing. Omit to let the component manage it;
+   * pass it together with `onOpenChange` when the parent has to react, e.g.
+   * to hide a neighbouring email field while this form is open.
+   */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /**
+   * Called when the `providerId` deep link starts sign-in. A parent that
+   * unmounts and remounts this component uses it to stop passing `providerId`,
+   * so the deep link runs once per page load rather than once per mount.
+   */
+  onAutoStart?: () => void;
+}
+
 /**
  * "Continue with single sign-on" for the employee portal. The API resolves
  * the organization's identity provider from the email domain (or starts with
@@ -30,19 +50,28 @@ export function SsoSignIn({
   inviteCode,
   searchParams,
   providerId,
-}: {
-  inviteCode?: string;
-  searchParams?: URLSearchParams;
-  providerId?: string;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  open,
+  onOpenChange,
+  onAutoStart,
+}: SsoSignInProps) {
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const isOpen = open ?? uncontrolledOpen;
+  // A deep link starts redirecting as soon as the component mounts.
+  const [isLoading, setIsLoading] = useState(Boolean(providerId));
   const autoStarted = useRef(false);
 
   const form = useForm<SsoFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: '' },
   });
+
+  const setIsOpen = useCallback(
+    (next: boolean) => {
+      setUncontrolledOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
 
   const startSignIn = useCallback(
     async (target: { email: string } | { providerId: string }) => {
@@ -63,24 +92,27 @@ export function SsoSignIn({
       if (error) {
         toast.error(getSsoSignInErrorMessage(error));
         setIsLoading(false);
+        // Let the user retry by email if the deep link's provider is unusable.
         setIsOpen(true);
       }
       // On success better-auth redirects the browser to the identity provider.
     },
-    [inviteCode, searchParams],
+    [inviteCode, searchParams, setIsOpen],
   );
 
   useEffect(() => {
     if (!providerId || autoStarted.current) return;
     autoStarted.current = true;
+    onAutoStart?.();
     void startSignIn({ providerId });
-  }, [providerId, startSignIn]);
+  }, [providerId, startSignIn, onAutoStart]);
 
   const handleSubmit = ({ email }: SsoFormValues) => startSignIn({ email });
+  const handleOpen = () => setIsOpen(true);
 
-  if (providerId && !isOpen) {
+  if (isLoading && !isOpen) {
     return (
-      <Button type="button" className="w-full h-11 font-medium" variant="outline" disabled>
+      <Button type="button" className="w-full h-11 font-medium" variant="default" disabled>
         <Spinner size="sm" />
         Redirecting to your identity provider…
       </Button>
@@ -91,9 +123,9 @@ export function SsoSignIn({
     return (
       <Button
         type="button"
-        onClick={() => setIsOpen(true)}
+        onClick={handleOpen}
         className="w-full h-11 font-medium"
-        variant="outline"
+        variant="default"
       >
         <Enterprise size={16} />
         Continue with single sign-on
@@ -133,7 +165,7 @@ export function SsoSignIn({
         <Button
           type="submit"
           className="w-full h-11 font-medium"
-          variant="outline"
+          variant="default"
           disabled={isLoading}
         >
           {isLoading ? (

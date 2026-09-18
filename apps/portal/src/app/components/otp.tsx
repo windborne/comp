@@ -1,72 +1,60 @@
 'use client';
 
 import { authClient } from '@/app/lib/auth-client';
-import { Button } from '@trycompai/ui/button';
-import { cn } from '@trycompai/ui/cn';
-import { Form, FormControl, FormField, FormItem } from '@trycompai/ui/form';
-import { Input } from '@trycompai/ui/input';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Spinner } from '@trycompai/design-system';
-import { ArrowRight } from '@trycompai/design-system/icons';
+import { Email } from '@trycompai/design-system/icons';
+import { Button } from '@trycompai/ui/button';
+import { Form, FormControl, FormField, FormItem } from '@trycompai/ui/form';
+import { Input } from '@trycompai/ui/input';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
-import { OtpForm } from './otp-form';
 
 const formSchema = z.object({
   email: z.string().email(),
 });
 
-type Props = {
-  className?: string;
-  deviceAuthRedirect?: string;
-};
+type OtpSignInValues = z.infer<typeof formSchema>;
 
-export function OtpSignIn({ className, deviceAuthRedirect }: Props) {
+interface OtpSignInProps {
+  /** Called once a one time password has been emailed, with the address it went to. */
+  onOtpSent: (email: string) => void;
+}
+
+/**
+ * "Continue with email": emails the user a one time password. The parent
+ * takes over from there and renders the code entry step (`OtpForm`).
+ */
+export function OtpSignIn({ onOtpSent }: OtpSignInProps) {
   const [isLoading, setLoading] = useState(false);
-  const [isSent, setSent] = useState(false);
-  const [_email, setEmail] = useState<string>();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<OtpSignInValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-    },
+    defaultValues: { email: '' },
   });
 
-  async function onSubmit({ email }: z.infer<typeof formSchema>) {
+  async function handleSubmit({ email }: OtpSignInValues) {
     setLoading(true);
-    setEmail(email);
 
-    const { data, error } = await authClient.emailOtp.sendVerificationOtp({
-      email: email,
+    const { error } = await authClient.emailOtp.sendVerificationOtp({
+      email,
       type: 'sign-in',
     });
 
-    if (error) {
-      setLoading(false);
-      toast.error(error.message);
-      setSent(false);
-    } else {
-      setSent(true);
-    }
-
     setLoading(false);
-  }
-
-  if (isSent) {
-    return (
-      <div className={cn('flex flex-col space-y-4', className)}>
-        <OtpForm email={_email ?? ''} deviceAuthRedirect={deviceAuthRedirect} />
-      </div>
-    );
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    onOtpSent(email);
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <div className={cn('flex flex-col space-y-4', className)}>
+      <form onSubmit={form.handleSubmit(handleSubmit)}>
+        <div className="flex flex-col space-y-3">
           <FormField
             control={form.control}
             name="email"
@@ -75,11 +63,13 @@ export function OtpSignIn({ className, deviceAuthRedirect }: Props) {
                 <FormControl>
                   <Input
                     placeholder="Your work email"
+                    type="email"
+                    autoComplete="email"
                     {...field}
                     autoFocus
-                    className="h-[40px]"
-                    autoCapitalize="false"
-                    autoCorrect="false"
+                    className="h-11"
+                    autoCapitalize="none"
+                    autoCorrect="off"
                     spellCheck="false"
                   />
                 </FormControl>
@@ -89,15 +79,16 @@ export function OtpSignIn({ className, deviceAuthRedirect }: Props) {
 
           <Button
             type="submit"
-            className="flex h-[40px] w-full space-x-2 px-6 py-4 font-medium active:scale-[0.98]"
+            className="w-full h-11 font-medium"
+            variant="outline"
             disabled={isLoading}
           >
             {isLoading ? (
               <Spinner size="sm" />
             ) : (
               <>
-                <span>Continue</span>
-                <ArrowRight size={16} />
+                <Email size={16} />
+                Continue with email
               </>
             )}
           </Button>

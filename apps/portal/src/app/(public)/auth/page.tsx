@@ -1,5 +1,4 @@
 import { LoginForm } from '@/app/components/login-form';
-import { OtpSignIn } from '@/app/components/otp';
 import { getAuthErrorMessage } from '@/app/lib/auth-errors';
 import { parseSsoProviderIdParam } from '@/app/lib/sso-deep-link';
 import { Alert } from '@trycompai/design-system';
@@ -36,12 +35,6 @@ export default async function Page({
       ? `/auth/device-callback?callback_port=${encodeURIComponent(callbackPort)}&state=${encodeURIComponent(state)}`
       : undefined;
 
-  const defaultSignInOptions = (
-    <div className="flex flex-col space-y-2">
-      <OtpSignIn deviceAuthRedirect={deviceAuthRedirect} />
-    </div>
-  );
-
   // Social providers are configured on the NestJS API.
   // Use optional env vars to explicitly disable them on the portal if needed.
   const showGoogle = process.env.PORTAL_DISABLE_GOOGLE_SIGN_IN !== 'true';
@@ -64,19 +57,21 @@ export default async function Page({
               Employee Portal
             </CardTitle>
             <CardDescription className="text-base text-muted-foreground px-4">
-              Enter your email address to receive a one time password.
+              {showSso
+                ? "Sign in with your organization's single sign-on, or enter your work email to receive a one time password."
+                : 'Enter your email address to receive a one time password.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 pb-6">
             {errorMessage && (
               <Alert variant="destructive" title="Sign-in failed" description={errorMessage} />
             )}
-            {defaultSignInOptions}
             <LoginForm
               showGoogle={showGoogle}
               showMicrosoft={showMicrosoft}
               showSso={showSso}
               ssoProviderId={ssoProviderId}
+              deviceAuthRedirect={deviceAuthRedirect}
             />
           </CardContent>
           <CardFooter className="pb-10">

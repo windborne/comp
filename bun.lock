@@ -500,6 +500,8 @@
       },
       "devDependencies": {
         "@tailwindcss/postcss": "^4.1.10",
+        "@testing-library/jest-dom": "^6.6.3",
+        "@testing-library/react": "^16.3.0",
         "@types/archiver": "^6.0.3",
         "@types/node": "^24.0.3",
         "eslint": "^9.18.0",
