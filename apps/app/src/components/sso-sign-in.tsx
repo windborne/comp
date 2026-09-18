@@ -35,6 +35,12 @@ interface SsoSignInProps {
    */
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /**
+   * Called when the `providerId` deep link starts sign-in. A parent that
+   * unmounts and remounts this component uses it to stop passing `providerId`,
+   * so the deep link runs once per page load rather than once per mount.
+   */
+  onAutoStart?: () => void;
 }
 
 /**
@@ -49,6 +55,7 @@ export function SsoSignIn({
   providerId,
   open,
   onOpenChange,
+  onAutoStart,
 }: SsoSignInProps) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const isOpen = open ?? uncontrolledOpen;
@@ -93,8 +100,9 @@ export function SsoSignIn({
   useEffect(() => {
     if (!providerId || autoStarted.current) return;
     autoStarted.current = true;
+    onAutoStart?.();
     void startSignIn({ providerId });
-  }, [providerId, startSignIn]);
+  }, [providerId, startSignIn, onAutoStart]);
 
   const handleSubmit = ({ email }: SsoFormValues) => startSignIn({ email });
   const handleOpen = () => setIsOpen(true);
