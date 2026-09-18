@@ -2,11 +2,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockSignInSso = vi.fn();
+const mockSignInMagicLink = vi.fn();
 vi.mock('@/utils/auth-client', () => ({
   authClient: {
     signIn: {
       sso: (...args: unknown[]) => mockSignInSso(...args),
-      magicLink: vi.fn(),
+      magicLink: (...args: unknown[]) => mockSignInMagicLink(...args),
       social: vi.fn(),
     },
   },
@@ -45,6 +46,7 @@ describe('LoginForm', () => {
       data: { url: 'https://idp.example.com', redirect: true },
       error: null,
     });
+    mockSignInMagicLink.mockResolvedValue({ data: { status: true }, error: null });
   });
 
   it('offers single sign-on first, email second and social providers under "More options"', () => {
@@ -52,6 +54,8 @@ describe('LoginForm', () => {
 
     expectInDocumentOrder(ssoButton(), emailInput(), emailButton(), moreOptions());
     expect(screen.queryByRole('button', { name: /continue with google/i })).not.toBeInTheDocument();
+    // Touch target: at least 40px tall on mobile.
+    expect(moreOptions()).toHaveClass('h-10');
 
     fireEvent.click(moreOptions());
 
@@ -111,6 +115,27 @@ describe('LoginForm', () => {
     fireEvent.click(screen.getByRole('button', { name: /use another method/i }));
 
     // Not stuck on "Redirecting…": the idle button is back above the email form.
+    expect(screen.queryByText(/redirecting to your identity provider/i)).not.toBeInTheDocument();
+    expectInDocumentOrder(ssoButton(), emailInput(), moreOptions());
+  });
+
+  it('starts a deep link once per page load, even after the magic-link card is dismissed', async () => {
+    mockSignInSso.mockResolvedValue({
+      data: null,
+      error: { status: 401, message: 'Provider domain has not been verified' },
+    });
+    render(<LoginForm {...allProviders} ssoProviderId="windborne" />);
+
+    await waitFor(() => expect(ssoEmailInput()).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /use another method/i }));
+
+    // Send a magic link, then come back from the "sent" card: SsoSignIn remounts.
+    fireEvent.change(emailInput(), { target: { value: 'sam@acme.com' } });
+    fireEvent.click(emailButton());
+    await screen.findByText(/magic link sent/i);
+    fireEvent.click(screen.getByRole('button', { name: /use another method/i }));
+
+    expect(mockSignInSso).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(/redirecting to your identity provider/i)).not.toBeInTheDocument();
     expectInDocumentOrder(ssoButton(), emailInput(), moreOptions());
   });

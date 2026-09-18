@@ -40,6 +40,9 @@ export function LoginForm({
   ssoProviderId,
 }: LoginFormProps) {
   const [isSsoOpen, setIsSsoOpen] = useState(false);
+  // A launcher deep link starts sign-in once per page load. SsoSignIn is
+  // unmounted while the "magic link sent" card shows, so the flag lives here.
+  const [deepLinkProviderId, setDeepLinkProviderId] = useState(ssoProviderId);
   const [isOptionsOpen, setIsOptionsOpen] = useState(false);
   const [magicLinkState, setMagicLinkState] = useState({ sent: false, email: '' });
 
@@ -48,6 +51,7 @@ export function LoginForm({
   };
 
   const handleUseAnotherMethod = () => setIsSsoOpen(false);
+  const handleDeepLinkStarted = () => setDeepLinkProviderId(undefined);
 
   if (magicLinkState.sent) {
     return (
@@ -98,7 +102,8 @@ export function LoginForm({
       <SsoSignIn
         inviteCode={inviteCode}
         redirectTo={redirectTo}
-        providerId={ssoProviderId}
+        providerId={deepLinkProviderId}
+        onAutoStart={handleDeepLinkStarted}
         open={isSsoOpen}
         onOpenChange={setIsSsoOpen}
       />
@@ -126,8 +131,7 @@ export function LoginForm({
                 <CollapsibleTrigger asChild>
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="relative px-4 text-sm text-muted-foreground bg-background hover:bg-muted"
+                    className="relative h-10 px-4 text-sm text-muted-foreground bg-background hover:bg-muted"
                   >
                     More options
                     {isOptionsOpen ? (
