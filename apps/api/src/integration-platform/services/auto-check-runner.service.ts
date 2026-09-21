@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { tasks } from '@trigger.dev/sdk';
 import { getManifest } from '@trycompai/integration-platform';
+import {
+  isLoopbackConfigured,
+  runConnectionChecks,
+} from '../../scheduler/loopback-client';
 import { ConnectionRepository } from '../repositories/connection.repository';
 import { ProviderRepository } from '../repositories/provider.repository';
 
@@ -119,6 +123,31 @@ export class AutoCheckRunnerService {
         `Skipping auto-run for connection ${connectionId}: ${reason}`,
       );
       return false;
+    }
+
+    // Self-hosted installs have no Trigger.dev worker: run the checks through
+    // the API's own endpoint in the background instead of dropping the run.
+    if (!process.env.TRIGGER_SECRET_KEY) {
+      if (!isLoopbackConfigured()) {
+        this.logger.warn(
+          `Skipping auto-run for connection ${connectionId}: no Trigger.dev worker and SERVICE_TOKEN_TRIGGER is unset`,
+        );
+        return false;
+      }
+      void runConnectionChecks({
+        organizationId: connection.organizationId,
+        connectionId,
+      })
+        .then(() =>
+          this.logger.log(`Auto-ran checks in-process for ${provider.slug}`),
+        )
+        .catch((error: unknown) =>
+          this.logger.error(
+            `In-process auto-run failed for ${connectionId}`,
+            error instanceof Error ? error.message : String(error),
+          ),
+        );
+      return true;
     }
 
     try {

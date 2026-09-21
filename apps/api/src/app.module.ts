@@ -18,6 +18,7 @@ import { HealthModule } from './health/health.module';
 import { OrganizationModule } from './organization/organization.module';
 import { SsoModule } from './sso/sso.module';
 import { ZulipModule } from './zulip/zulip.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
 import { OrganizationAccessModule } from './organization-access/organization-access.module';
 import { PoliciesModule } from './policies/policies.module';
 import { RisksModule } from './risks/risks.module';
@@ -87,6 +88,7 @@ import { OffboardingChecklistModule } from './offboarding-checklist/offboarding-
     OrganizationModule,
     SsoModule,
     ZulipModule,
+    SchedulerModule,
     OrganizationAccessModule,
     PeopleModule,
     RisksModule,
