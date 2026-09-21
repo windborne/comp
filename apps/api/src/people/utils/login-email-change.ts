@@ -85,6 +85,7 @@ export async function notifyLoginEmailChanged(params: {
     await Promise.all(
       [change.oldEmail, change.newEmail].map((to) =>
         triggerEmail({
+          organizationId,
           to,
           subject: 'Your Comp AI login email was changed',
           react: LoginEmailChangedEmail({

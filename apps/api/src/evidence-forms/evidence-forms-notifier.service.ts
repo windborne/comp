@@ -63,6 +63,7 @@ export class EvidenceFormsNotifierService {
     await Promise.allSettled(
       recipients.map((recipient) =>
         this.sendToRecipient({
+          organizationId,
           recipient,
           organizationName,
           submitterName,
@@ -76,6 +77,7 @@ export class EvidenceFormsNotifierService {
   }
 
   private async sendToRecipient(params: {
+    organizationId: string;
     recipient: Recipient;
     organizationName: string;
     submitterName: string;
@@ -84,7 +86,13 @@ export class EvidenceFormsNotifierService {
     permissionsNeeded: string;
     reasonForRequest: string;
   }): Promise<void> {
-    const { recipient, submitterName, organizationName, reviewUrl } = params;
+    const {
+      organizationId,
+      recipient,
+      submitterName,
+      organizationName,
+      reviewUrl,
+    } = params;
 
     try {
       const isUnsubscribed = await isUserUnsubscribed(db, recipient.email);
@@ -96,6 +104,7 @@ export class EvidenceFormsNotifierService {
       }
 
       await triggerEmail({
+        organizationId,
         to: recipient.email,
         subject: `New access request from ${submitterName}`,
         react: EvidenceAccessRequestSubmittedEmail({

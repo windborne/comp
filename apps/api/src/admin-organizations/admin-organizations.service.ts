@@ -363,6 +363,7 @@ export class AdminOrganizationsService {
       const inviteLink = `${appUrl}/invite/${invitation.id}`;
 
       await triggerEmail({
+        organizationId: orgId,
         to: normalizedEmail,
         subject: `You've been invited to join ${org.name} on Comp AI`,
         react: InviteEmail({

@@ -149,6 +149,7 @@ export class TaskItemAssignmentNotifierService {
       // Send email notification via Resend
       try {
         const { id } = await triggerEmail({
+          organizationId,
           to: assigneeUser.email,
           subject: `You were assigned to a task: ${taskTitle}`,
           react: TaskItemAssignedEmail({

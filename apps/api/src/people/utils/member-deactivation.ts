@@ -173,6 +173,7 @@ export async function notifyOwnerOfUnassignedItems({
 
     const userName = owner.user.name || owner.user.email || 'Owner';
     await triggerEmail({
+      organizationId,
       to: owner.user.email,
       subject: `Member removed from ${organization.name} - items require reassignment`,
       react: UnassignedItemsNotificationEmail({

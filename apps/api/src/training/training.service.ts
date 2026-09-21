@@ -174,6 +174,7 @@ export class TrainingService {
     if (!completedAt) return { sent: false, reason: 'no_completion_date' };
 
     await this.trainingEmailService.sendTrainingCompletedEmail({
+      organizationId,
       toEmail: resolved.email,
       toName: resolved.userName,
       organizationName: resolved.organizationName,
@@ -241,6 +242,7 @@ export class TrainingService {
     if (!completedAt) return { sent: false, reason: 'no_completion_date' };
 
     await this.trainingEmailService.sendHipaaTrainingCompletedEmail({
+      organizationId,
       toEmail: resolved.email,
       toName: resolved.userName,
       organizationName: resolved.organizationName,

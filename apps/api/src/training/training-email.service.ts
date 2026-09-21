@@ -13,12 +13,14 @@ export class TrainingEmailService {
   ) {}
 
   async sendTrainingCompletedEmail(params: {
+    organizationId: string;
     toEmail: string;
     toName: string;
     organizationName: string;
     completedAt: Date;
   }): Promise<void> {
-    const { toEmail, toName, organizationName, completedAt } = params;
+    const { organizationId, toEmail, toName, organizationName, completedAt } =
+      params;
 
     // Generate the certificate PDF
     const certificatePdf =
@@ -37,6 +39,7 @@ export class TrainingEmailService {
     const filename = `security-awareness-training-certificate-${safeUserName}.pdf`;
 
     const { id } = await triggerEmail({
+      organizationId,
       to: toEmail,
       subject: `Congratulations! You've completed your Security Awareness Training - ${organizationName}`,
       react: TrainingCompletedEmail({
@@ -61,12 +64,14 @@ export class TrainingEmailService {
   }
 
   async sendHipaaTrainingCompletedEmail(params: {
+    organizationId: string;
     toEmail: string;
     toName: string;
     organizationName: string;
     completedAt: Date;
   }): Promise<void> {
-    const { toEmail, toName, organizationName, completedAt } = params;
+    const { organizationId, toEmail, toName, organizationName, completedAt } =
+      params;
 
     const certificatePdf =
       await this.certificatePdfService.generateHipaaCertificatePdf({
@@ -83,6 +88,7 @@ export class TrainingEmailService {
     const filename = `hipaa-training-certificate-${safeUserName}.pdf`;
 
     const { id } = await triggerEmail({
+      organizationId,
       to: toEmail,
       subject: `Congratulations! You've completed your HIPAA Security Awareness Training - ${organizationName}`,
       react: HipaaTrainingCompletedEmail({

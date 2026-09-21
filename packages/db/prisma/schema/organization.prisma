@@ -119,6 +119,9 @@ model Organization {
   // Single sign-on (OIDC) identity providers registered by this org
   ssoProviders SsoProvider[]
 
+  // Zulip bot that mirrors email notifications as direct messages
+  zulipIntegration ZulipIntegration?
+
   // Timeline
   timelineInstances TimelineInstance[]
 

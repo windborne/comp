@@ -189,6 +189,7 @@ export class TaskNotifierService {
           // Send email notification
           try {
             const { id } = await triggerEmail({
+              organizationId,
               to: recipient.email,
               subject: `${taskCount} task${taskCount === 1 ? '' : 's'} status changed to ${statusLabel}`,
               react: TaskBulkStatusChangedEmail({
@@ -351,6 +352,7 @@ export class TaskNotifierService {
           // Send email notification
           try {
             const { id } = await triggerEmail({
+              organizationId,
               to: recipient.email,
               subject: `${taskCount} task${taskCount === 1 ? '' : 's'} reassigned to ${newAssigneeName}`,
               react: TaskBulkAssigneeChangedEmail({
@@ -516,6 +518,7 @@ export class TaskNotifierService {
           // Send email notification
           try {
             const { id } = await triggerEmail({
+              organizationId,
               to: recipient.email,
               subject: `Task "${taskTitle}" status changed to ${newStatusLabel}`,
               react: TaskStatusChangedEmail({
@@ -700,6 +703,7 @@ export class TaskNotifierService {
           // Send email notification
           try {
             const { id } = await triggerEmail({
+              organizationId,
               to: recipient.email,
               subject: `Task "${taskTitle}" reassigned to ${newAssigneeName}`,
               react: TaskAssigneeChangedEmail({
@@ -850,6 +854,7 @@ export class TaskNotifierService {
       // Send email notification
       try {
         const { id } = await triggerEmail({
+          organizationId,
           to: recipient.email,
           subject: `Evidence review requested: "${taskTitle}"`,
           react: EvidenceReviewRequestedEmail({
@@ -1011,6 +1016,7 @@ export class TaskNotifierService {
       // Send email notification
       try {
         const { id } = await triggerEmail({
+          organizationId,
           to: recipient.email,
           subject: `${taskCount} ${taskText} submitted for your review`,
           react: EvidenceBulkReviewRequestedEmail({
@@ -1207,6 +1213,7 @@ export class TaskNotifierService {
           // Send email notification
           try {
             const { id } = await triggerEmail({
+              organizationId,
               to: recipient.email,
               subject: `Automation failures on task "${taskTitle}"`,
               react: AutomationFailuresEmail({
@@ -1427,6 +1434,7 @@ export class TaskNotifierService {
           // Send email notification
           try {
             const { id } = await triggerEmail({
+              organizationId,
               to: recipient.email,
               subject: `${taskCount} ${taskText} with automation failures`,
               react: AutomationBulkFailuresEmail({

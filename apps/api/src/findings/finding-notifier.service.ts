@@ -304,6 +304,7 @@ export class FindingNotifierService {
 
       await Promise.allSettled([
         triggerEmail({
+          organizationId,
           to: recipient.email,
           subject,
           react: FindingNotificationEmail({
