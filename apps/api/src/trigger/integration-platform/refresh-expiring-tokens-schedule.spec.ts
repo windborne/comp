@@ -24,11 +24,13 @@ describe('refreshExpiringTokensSchedule', () => {
   const lookaheadMs = 24 * 60 * 60 * 1000;
 
   beforeEach(() => {
+    process.env.API_URL = 'http://api.test';
     jest.spyOn(Date, 'now').mockReturnValue(nowMs);
     (requestValidCredentials as jest.Mock).mockResolvedValue({ success: true });
   });
 
   afterEach(() => {
+    delete process.env.API_URL;
     jest.restoreAllMocks();
     jest.clearAllMocks();
   });

@@ -1,9 +1,9 @@
-import { db } from '@db';
 import { logger, schedules } from '@trigger.dev/sdk';
+import {
+  findConnectionsWithExpiringTokens,
+  TOKEN_REFRESH_LOOKAHEAD_HOURS,
+} from '../../integration-platform/scheduling/expiring-tokens';
 import { requestValidCredentials } from './ensure-valid-credentials';
-
-// Refresh tokens expiring within the next 24 hours
-const REFRESH_LOOKAHEAD_HOURS = 24;
 
 /**
  * Daily scheduled task that proactively refreshes OAuth tokens before they
@@ -29,51 +29,24 @@ export const refreshExpiringTokensSchedule = schedules.task({
       return { refreshed: 0, failed: 0, skipped: 0 };
     }
 
-    const now = new Date();
-    const lookaheadMs = REFRESH_LOOKAHEAD_HOURS * 60 * 60 * 1000;
-    const expiryThreshold = new Date(now.getTime() + lookaheadMs);
-
-    // Find all active connections and check the expiry of the latest credential
-    // version. Older credential versions may exist, so a `some` predicate would
-    // incorrectly select connections where an older version is expiring while
-    // the latest version is still valid.
-    const activeConnections = await db.integrationConnection.findMany({
-      where: { status: 'active' },
-      include: {
-        organization: { select: { id: true, name: true } },
-        credentialVersions: {
-          orderBy: { version: 'desc' },
-          take: 1,
-          select: { expiresAt: true },
-        },
-      },
+    // Date.now() (not `new Date()`) so tests can pin the clock.
+    const expiringConnections = await findConnectionsWithExpiringTokens({
+      now: new Date(Date.now()),
     });
-
-    const expiringConnections = activeConnections.filter((connection) => {
-      const expiresAt = connection.credentialVersions[0]?.expiresAt;
-      return (
-        expiresAt !== undefined &&
-        expiresAt !== null &&
-        expiresAt <= expiryThreshold &&
-        expiresAt > now
-      );
-    });
-
-    logger.info(`Found ${expiringConnections.length} connections with tokens expiring within ${REFRESH_LOOKAHEAD_HOURS}h`);
+    logger.info(`Found ${expiringConnections.length} connections with tokens expiring within ${TOKEN_REFRESH_LOOKAHEAD_HOURS}h`);
 
     let refreshed = 0;
     let failed = 0;
     let skipped = 0;
 
     for (const connection of expiringConnections) {
-      const expiresAt = connection.credentialVersions[0]?.expiresAt;
-      const minutesUntilExpiry = expiresAt
-        ? Math.round((expiresAt.getTime() - Date.now()) / 60_000)
-        : null;
+      const minutesUntilExpiry = Math.round(
+        (connection.expiresAt.getTime() - Date.now()) / 60_000,
+      );
 
       logger.info(`Refreshing token for connection ${connection.id}`, {
         organizationId: connection.organizationId,
-        organizationName: connection.organization?.name,
+        organizationName: connection.organizationName,
         minutesUntilExpiry,
       });
 

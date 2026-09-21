@@ -1,6 +1,5 @@
-import { getManifest } from '@trycompai/integration-platform';
-import { db } from '@db';
 import { logger, schedules } from '@trigger.dev/sdk';
+import { findEmployeeSyncConnections } from '../../integration-platform/scheduling/sync-targets';
 
 const API_BASE_URL = process.env.BASE_URL || 'http://localhost:3333';
 
@@ -18,60 +17,7 @@ export const syncEmployeesSchedule = schedules.task({
       lastRun: payload.lastTimestamp,
     });
 
-    // Find all organizations that have selected an employee sync provider
-    const orgsWithSyncProvider = await db.organization.findMany({
-      where: {
-        employeeSyncProvider: { not: null },
-      },
-      select: {
-        id: true,
-        name: true,
-        employeeSyncProvider: true,
-      },
-    });
-
-    if (orgsWithSyncProvider.length === 0) {
-      logger.info('No organizations have selected an employee sync provider');
-      return { success: true, syncsTriggered: 0, results: [] };
-    }
-
-    // Find the matching active connections for each org's selected provider
-    const syncConnections: Array<{
-      id: string;
-      organizationId: string;
-      provider: { slug: string };
-      organization: { id: string; name: string };
-    }> = [];
-
-    for (const org of orgsWithSyncProvider) {
-      const connection = await db.integrationConnection.findFirst({
-        where: {
-          organizationId: org.id,
-          status: 'active',
-          provider: {
-            slug: org.employeeSyncProvider!,
-          },
-        },
-        include: {
-          provider: true,
-          organization: {
-            select: { id: true, name: true },
-          },
-        },
-      });
-
-      if (connection) {
-        const manifest = getManifest(connection.provider.slug);
-        if (manifest?.capabilities?.includes('sync')) {
-          syncConnections.push(connection);
-        }
-      } else {
-        logger.warn(
-          `Organization ${org.name} has sync provider ${org.employeeSyncProvider} but no active connection`,
-        );
-      }
-    }
-
+    const syncConnections = await findEmployeeSyncConnections({ log: logger });
     if (syncConnections.length === 0) {
       logger.info('No valid sync connections found for selected providers');
       return { success: true, syncsTriggered: 0, results: [] };
@@ -96,10 +42,10 @@ export const syncEmployeesSchedule = schedules.task({
 
     // Process each sync connection
     for (const conn of syncConnections) {
-      const providerSlug = conn.provider.slug;
+      const providerSlug = conn.providerSlug;
 
-      logger.info(`Syncing ${providerSlug} for org ${conn.organization.name}`, {
-        connectionId: conn.id,
+      logger.info(`Syncing ${providerSlug} for org ${conn.organizationName}`, {
+        connectionId: conn.connectionId,
         organizationId: conn.organizationId,
       });
 
@@ -107,15 +53,15 @@ export const syncEmployeesSchedule = schedules.task({
         // Call the appropriate sync endpoint based on provider
         const syncResult = await syncProvider({
           providerSlug,
-          connectionId: conn.id,
+          connectionId: conn.connectionId,
           organizationId: conn.organizationId,
         });
 
         results.push({
-          connectionId: conn.id,
+          connectionId: conn.connectionId,
           providerSlug,
           organizationId: conn.organizationId,
-          organizationName: conn.organization.name,
+          organizationName: conn.organizationName,
           success: true,
           imported: syncResult.imported,
           reactivated: syncResult.reactivated,
@@ -124,7 +70,7 @@ export const syncEmployeesSchedule = schedules.task({
         });
 
         logger.info(`Sync completed for ${providerSlug}`, {
-          connectionId: conn.id,
+          connectionId: conn.connectionId,
           imported: syncResult.imported,
           reactivated: syncResult.reactivated,
           deactivated: syncResult.deactivated,
@@ -134,16 +80,16 @@ export const syncEmployeesSchedule = schedules.task({
           error instanceof Error ? error.message : String(error);
 
         results.push({
-          connectionId: conn.id,
+          connectionId: conn.connectionId,
           providerSlug,
           organizationId: conn.organizationId,
-          organizationName: conn.organization.name,
+          organizationName: conn.organizationName,
           success: false,
           error: errorMessage,
         });
 
         logger.error(`Sync failed for ${providerSlug}`, {
-          connectionId: conn.id,
+          connectionId: conn.connectionId,
           error: errorMessage,
         });
       }
