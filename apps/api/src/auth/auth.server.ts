@@ -456,6 +456,7 @@ export const auth = betterAuth({
           'https://app.trycomp.ai';
         const inviteLink = `${appUrl}/invite/${data.invitation.id}`;
         await triggerEmail({
+          organizationId: data.organization.id,
           to: data.email,
           subject: `You've been invited to join ${data.organization.name} on Comp AI`,
           react: InviteEmail({

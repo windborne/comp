@@ -1,6 +1,7 @@
 import { render } from '@react-email/render';
 import { tasks } from '@trigger.dev/sdk';
 import type { ReactElement } from 'react';
+import { mirrorEmailToZulip } from '../zulip/zulip-mirror';
 import { isSmtpConfigured, sendEmailViaSmtp } from './smtp';
 import { triggerEmail } from './trigger-email';
 
@@ -20,10 +21,16 @@ jest.mock('./smtp', () => ({
   sendEmailViaSmtp: jest.fn(),
 }));
 
+jest.mock('../zulip/zulip-mirror', () => ({
+  __esModule: true,
+  mirrorEmailToZulip: jest.fn(),
+}));
+
 const renderMock = render as jest.Mock;
 const triggerMock = tasks.trigger as jest.Mock;
 const isSmtpConfiguredMock = isSmtpConfigured as jest.Mock;
 const sendEmailViaSmtpMock = sendEmailViaSmtp as jest.Mock;
+const mirrorEmailToZulipMock = mirrorEmailToZulip as jest.Mock;
 
 // render is mocked, so the element's actual shape is irrelevant here.
 const react = {} as unknown as ReactElement;
@@ -39,6 +46,7 @@ describe('triggerEmail', () => {
     triggerMock.mockResolvedValue({ id: 'trigger-handle-id' });
     sendEmailViaSmtpMock.mockResolvedValue({ id: 'smtp-message-id' });
     isSmtpConfiguredMock.mockReturnValue(false);
+    mirrorEmailToZulipMock.mockResolvedValue(undefined);
   });
 
   afterAll(() => {
@@ -97,5 +105,54 @@ describe('triggerEmail', () => {
     ).rejects.toThrow(/No email transport configured/);
     expect(triggerMock).not.toHaveBeenCalled();
     expect(sendEmailViaSmtpMock).not.toHaveBeenCalled();
+  });
+
+  it('mirrors the rendered email to Zulip for the organization', async () => {
+    isSmtpConfiguredMock.mockReturnValue(true);
+
+    await triggerEmail({
+      to: 'user@example.com',
+      subject: 'Task assigned',
+      react,
+      organizationId: 'org_1',
+      system: true,
+    });
+
+    expect(mirrorEmailToZulipMock).toHaveBeenCalledWith({
+      organizationId: 'org_1',
+      to: 'user@example.com',
+      subject: 'Task assigned',
+      html: '<html>email</html>',
+      channel: 'system',
+    });
+  });
+
+  it('still mirrors to Zulip when the email transport fails', async () => {
+    isSmtpConfiguredMock.mockReturnValue(true);
+    sendEmailViaSmtpMock.mockRejectedValue(new Error('smtp down'));
+
+    await expect(
+      triggerEmail({
+        to: 'user@example.com',
+        subject: 'S',
+        react,
+        organizationId: 'org_1',
+      }),
+    ).rejects.toThrow('smtp down');
+    expect(mirrorEmailToZulipMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores a rejected Zulip mirror and returns the email result', async () => {
+    isSmtpConfiguredMock.mockReturnValue(true);
+    mirrorEmailToZulipMock.mockRejectedValue(new Error('zulip exploded'));
+
+    await expect(
+      triggerEmail({
+        to: 'user@example.com',
+        subject: 'S',
+        react,
+        organizationId: 'org_1',
+      }),
+    ).resolves.toEqual({ id: 'smtp-message-id' });
   });
 });

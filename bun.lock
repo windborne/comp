@@ -168,6 +168,7 @@
         "exceljs": "^4.4.0",
         "express": "^4.21.2",
         "helmet": "^8.1.0",
+        "html-to-text": "^9.0.5",
         "jose": "^6.0.12",
         "jspdf": "^4.2.0",
         "jspdf-autotable": "^5.0.8",
@@ -197,6 +198,7 @@
         "@types/adm-zip": "^0.5.7",
         "@types/archiver": "^6.0.3",
         "@types/express": "^5.0.0",
+        "@types/html-to-text": "^9.0.4",
         "@types/jest": "^30.0.0",
         "@types/multer": "^1.4.12",
         "@types/node": "^24.0.3",
@@ -2907,6 +2909,8 @@
     "@types/har-format": ["@types/har-format@1.2.16", "", {}, "sha512-fluxdy7ryD3MV6h8pTfTYpy/xQzCFC7m89nOH9y94cNqJ1mDIDPut7MnRHI3F6qRmh/cT2fUjG1MLdCNb4hE9A=="],
 
     "@types/hast": ["@types/hast@3.0.5", "", { "dependencies": { "@types/unist": "*" } }, "sha512-rp/ezSWaD1m44dPKICGhiskI13nVr7qTloFwDa/IYkhhf5nzwP+zIQcIJh3WIFSBOy/H1PzB40jPjMDksN4F+g=="],
+
+    "@types/html-to-text": ["@types/html-to-text@9.0.4", "", {}, "sha512-pUY3cKH/Nm2yYrEmDlPR1mR7yszjGx4DrwPjQ702C4/D5CwHuZTgZdIdwPkRbcuhs7BAh2L5rg3CL5cbRiGTCQ=="],
 
     "@types/http-cache-semantics": ["@types/http-cache-semantics@4.2.0", "", {}, "sha512-L3LgimLHXtGkWikKnsPg0/VFx9OGZaC+eN1u4r+OB1XRqH3meBIAVC2zr1WdMH+RHmnRkqliQAOHNJ/E0j/e0Q=="],
 

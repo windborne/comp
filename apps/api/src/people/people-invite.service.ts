@@ -239,6 +239,7 @@ export class PeopleInviteService {
       try {
         const inviteLink = this.buildPortalUrl(organizationId);
         await triggerEmail({
+          organizationId,
           to: email,
           subject: `You've been invited to join ${organization.name} on Comp AI`,
           react: InvitePortalEmail({
@@ -362,6 +363,7 @@ export class PeopleInviteService {
     });
 
     await this.sendInviteEmails({
+      organizationId,
       email,
       organizationName: organization.name,
       sendPortalEmail,
@@ -433,6 +435,7 @@ export class PeopleInviteService {
     const inviteLink = this.buildPortalUrl(organizationId);
 
     await triggerEmail({
+      organizationId,
       to: email,
       subject: `Access your ${member.organization.name} Employee Portal on Comp AI`,
       react: InvitePortalEmail({
@@ -471,6 +474,7 @@ export class PeopleInviteService {
   }
 
   private async sendInviteEmails(params: {
+    organizationId: string;
     email: string;
     organizationName: string;
     sendPortalEmail?: boolean;
@@ -479,6 +483,7 @@ export class PeopleInviteService {
     appLink: string;
   }): Promise<void> {
     const {
+      organizationId,
       email,
       organizationName,
       sendPortalEmail,
@@ -489,6 +494,7 @@ export class PeopleInviteService {
 
     if (sendAppEmail) {
       await triggerEmail({
+        organizationId,
         to: email,
         subject: `You've been invited to join ${organizationName} on Comp AI`,
         react: InviteEmail({
@@ -499,6 +505,7 @@ export class PeopleInviteService {
       });
     } else if (sendPortalEmail) {
       await triggerEmail({
+        organizationId,
         to: email,
         subject: `You've been invited to join ${organizationName} on Comp AI`,
         react: InvitePortalEmail({
@@ -509,6 +516,7 @@ export class PeopleInviteService {
       });
     } else {
       await triggerEmail({
+        organizationId,
         to: email,
         subject: `You've been invited to join ${organizationName} on Comp AI`,
         react: InviteEmail({

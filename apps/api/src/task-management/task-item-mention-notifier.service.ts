@@ -138,6 +138,7 @@ export class TaskItemMentionNotifierService {
         // Send email notification via Resend
         try {
           const { id } = await triggerEmail({
+            organizationId,
             to: user.email,
             subject: `${mentionedByName} mentioned you in a task`,
             react: TaskItemMentionedEmail({
