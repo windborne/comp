@@ -15,7 +15,10 @@ export interface IntegrationChecksJobSummary extends Record<string, unknown> {
   organizations: number;
   tasks: number;
   checksRun: number;
+  /** Calls that never reached the API or returned non-2xx. */
   checksErrored: number;
+  /** Checks that ran but reported a provider/API error (e.g. Google 403). */
+  checksWithErrors: number;
   tasksNewlyFailed: number;
   deviceSyncs: number;
   deviceSyncFailures: number;
@@ -23,6 +26,7 @@ export interface IntegrationChecksJobSummary extends Record<string, unknown> {
 
 interface TaskOutcome {
   hadErrors: boolean;
+  checksWithErrors: number;
   totalPassing: number;
   totalFindings: number;
   statuses: Array<string | null>;
@@ -53,6 +57,7 @@ async function runTaskChecks({
 }): Promise<TaskOutcome> {
   const outcome: TaskOutcome = {
     hadErrors: false,
+    checksWithErrors: 0,
     totalPassing: 0,
     totalFindings: 0,
     statuses: [],
@@ -68,7 +73,13 @@ async function runTaskChecks({
       outcome.totalPassing += result.totalPassing ?? 0;
       outcome.totalFindings += result.totalFindings ?? 0;
       outcome.statuses.push(result.taskStatus ?? null);
-      if (!result.success || result.hadErrors) outcome.hadErrors = true;
+      if (!result.success || result.hadErrors) {
+        outcome.hadErrors = true;
+        outcome.checksWithErrors++;
+        log.warn(`Check ${checkId} reported errors for task ${task.taskId}`, {
+          error: result.error,
+        });
+      }
     } catch (error) {
       outcome.hadErrors = true;
       log.error(`Check ${checkId} failed for task ${task.taskId}`, {
@@ -97,6 +108,7 @@ export async function runIntegrationChecksJob(
     tasks: tasksToRun.length,
     checksRun: 0,
     checksErrored: 0,
+    checksWithErrors: 0,
     tasksNewlyFailed: 0,
     deviceSyncs: 0,
     deviceSyncFailures: 0,
@@ -116,6 +128,7 @@ export async function runIntegrationChecksJob(
       });
       summary.checksRun += outcome.statuses.length;
       summary.checksErrored += task.checkIds.length - outcome.statuses.length;
+      summary.checksWithErrors += outcome.checksWithErrors;
 
       // Only a run where every check executed counts as "ran" for the
       // schedule, so an errored check retries on the next tick.
