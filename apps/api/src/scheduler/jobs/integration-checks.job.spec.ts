@@ -121,6 +121,32 @@ describe('runIntegrationChecksJob', () => {
     );
   });
 
+  it('counts checks that ran but reported a provider error, and does not mark them run', async () => {
+    runCheckMock.mockResolvedValue({
+      success: true,
+      hadErrors: true,
+      error: 'HTTP 403: Forbidden',
+      totalPassing: 0,
+      totalFindings: 0,
+      taskStatus: null,
+    });
+
+    const summary = await runIntegrationChecksJob(log);
+
+    expect(summary).toEqual(
+      expect.objectContaining({
+        checksRun: 1,
+        checksErrored: 0,
+        checksWithErrors: 1,
+      }),
+    );
+    expect(mockedDb.task.update).not.toHaveBeenCalled();
+    expect(log.warn).toHaveBeenCalledWith(
+      expect.stringContaining('reported errors'),
+      expect.objectContaining({ error: 'HTTP 403: Forbidden' }),
+    );
+  });
+
   it('leaves integrationLastRunAt alone when a check errored so it retries next tick', async () => {
     runCheckMock.mockRejectedValue(new Error('provider 500'));
 
