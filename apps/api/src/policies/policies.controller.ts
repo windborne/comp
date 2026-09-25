@@ -36,6 +36,14 @@ import type { Response } from 'express';
 import { openai } from '@ai-sdk/openai';
 import { streamText, convertToModelMessages, type UIMessage } from 'ai';
 import { db } from '@db';
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+} from '@aws-sdk/client-s3';
+// The shared client carries APP_AWS_ENDPOINT + credentials; a bare S3Client
+// ignores a self-hosted (MinIO) store and every PDF upload/view fails.
+import { BUCKET_NAME, getSignedUrl, s3Client } from '../app/s3';
 import { auth as triggerAuth, tasks } from '@trigger.dev/sdk';
 import type { updatePolicy } from '../trigger/policies/update-policy';
 import { AuditRead } from '../audit/skip-audit-log.decorator';
@@ -459,26 +467,21 @@ export class PoliciesController {
     }
 
     // Generate signed URL
-    const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
-    const { getSignedUrl } = await import('../app/s3.js');
-    const bucketName = process.env.APP_AWS_BUCKET_NAME;
-
-    if (!bucketName) {
+    if (!s3Client || !BUCKET_NAME) {
       return { url: null };
     }
 
-    const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
     // Force inline PDF rendering regardless of the object's stored Content-Type.
     // Files uploaded via presigned URLs can land with the wrong type (e.g. the
     // uploader's HTTP client defaults to application/x-www-form-urlencoded),
     // which makes browsers download instead of preview.
     const command = new GetObjectCommand({
-      Bucket: bucketName,
+      Bucket: BUCKET_NAME,
       Key: pdfUrl,
       ResponseContentType: 'application/pdf',
       ResponseContentDisposition: 'inline',
     });
-    const url = await getSignedUrl(s3, command, { expiresIn: 900 });
+    const url = await getSignedUrl(s3Client, command, { expiresIn: 900 });
 
     return { url };
   }
@@ -565,13 +568,10 @@ export class PoliciesController {
       );
     }
 
-    const { S3Client, PutObjectCommand, DeleteObjectCommand } =
-      await import('@aws-sdk/client-s3');
-    const bucketName = process.env.APP_AWS_BUCKET_NAME;
-    if (!bucketName)
+    const s3 = s3Client;
+    const bucketName = BUCKET_NAME;
+    if (!s3 || !bucketName)
       throw new BadRequestException('File storage is not configured');
-
-    const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 
     const policy = await db.policy.findFirst({
       where: { id, organizationId, archivedAt: null },
@@ -723,13 +723,10 @@ export class PoliciesController {
     @OrganizationId() organizationId: string,
     @Query('versionId') versionId?: string,
   ) {
-    const { S3Client, DeleteObjectCommand } =
-      await import('@aws-sdk/client-s3');
-    const bucketName = process.env.APP_AWS_BUCKET_NAME;
-    if (!bucketName)
+    const s3 = s3Client;
+    const bucketName = BUCKET_NAME;
+    if (!s3 || !bucketName)
       throw new BadRequestException('File storage is not configured');
-
-    const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 
     const policy = await db.policy.findFirst({
       where: { id, organizationId, archivedAt: null },
@@ -826,18 +823,13 @@ export class PoliciesController {
     }
     if (!pdfUrl) return { url: null };
 
-    const { S3Client, GetObjectCommand } = await import('@aws-sdk/client-s3');
-    const { getSignedUrl } = await import('../app/s3.js');
-    const bucketName = process.env.APP_AWS_BUCKET_NAME;
-    if (!bucketName) return { url: null };
-
-    const s3 = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
+    if (!s3Client || !BUCKET_NAME) return { url: null };
     // Force inline PDF rendering regardless of the object's stored Content-Type
     // so the browser previews the document instead of downloading it.
     const url = await getSignedUrl(
-      s3,
+      s3Client,
       new GetObjectCommand({
-        Bucket: bucketName,
+        Bucket: BUCKET_NAME,
         Key: pdfUrl,
         ResponseContentType: 'application/pdf',
         ResponseContentDisposition: 'inline',
