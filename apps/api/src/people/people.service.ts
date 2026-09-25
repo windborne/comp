@@ -428,7 +428,7 @@ export class PeopleService {
     memberId: string,
     organizationId: string,
     callerUserId?: string,
-    options?: { skipOffboarding?: boolean },
+    options?: { skipOffboarding?: boolean; offboardDate?: Date },
   ): Promise<{
     success: boolean;
     deletedMember: { id: string; name: string; email: string };
@@ -474,7 +474,10 @@ export class PeopleService {
         isActive: false,
         ...(skipOffboarding
           ? { offboardDate: null }
-          : { offboardDate: member.offboardDate ?? new Date() }),
+          : {
+              offboardDate:
+                options?.offboardDate ?? member.offboardDate ?? new Date(),
+            }),
       },
     });
 

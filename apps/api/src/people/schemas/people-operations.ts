@@ -29,7 +29,7 @@ export const PEOPLE_OPERATIONS: Record<string, ApiOperationOptions> = {
   deleteMember: {
     summary: 'Delete member',
     description:
-      'Permanently removes a member from the organization. This action cannot be undone. Supports both API key authentication (X-API-Key header) and session authentication (Bearer token or cookies).',
+      'Deactivates a member: revokes their sessions, clears their assignments and removes their Fleet devices. Records are kept and it can be undone with reactivate-member. Prefer deactivate-member, which also sets the offboard date.',
   },
   unlinkDevice: {
     summary: 'Unlink device from member',

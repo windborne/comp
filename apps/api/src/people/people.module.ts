@@ -8,11 +8,19 @@ import { PeopleController } from './people.controller';
 import { PeopleService } from './people.service';
 import { PeopleInviteService } from './people-invite.service';
 import { PeopleAccessService } from './people-access.service';
+import { PeopleDeactivateController } from './people-deactivate.controller';
+import { PeopleDeactivateService } from './people-deactivate.service';
 
 @Module({
   imports: [AuthModule, AttachmentsModule, TimelinesModule, IntegrationPlatformModule],
-  controllers: [PeopleController],
-  providers: [PeopleService, PeopleInviteService, PeopleAccessService, FleetService],
+  controllers: [PeopleController, PeopleDeactivateController],
+  providers: [
+    PeopleService,
+    PeopleInviteService,
+    PeopleAccessService,
+    PeopleDeactivateService,
+    FleetService,
+  ],
   exports: [PeopleService],
 })
 export class PeopleModule {}

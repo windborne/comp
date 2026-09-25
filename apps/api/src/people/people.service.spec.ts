@@ -730,6 +730,15 @@ describe('PeopleService', () => {
       });
     });
 
+    it('should record the given offboard date instead of today', async () => {
+      const offboardDate = new Date('2026-09-10');
+
+      await service.deleteById('mem_1', 'org_123', 'usr_actor', { offboardDate });
+
+      const updateCall = (db.member.update as jest.Mock).mock.calls[0]?.[0];
+      expect(updateCall.data.offboardDate).toBe(offboardDate);
+    });
+
     it('should throw ForbiddenException when deleting an owner', async () => {
       (db.member.findFirst as jest.Mock).mockResolvedValue({
         ...mockMember,
