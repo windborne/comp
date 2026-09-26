@@ -28,6 +28,7 @@ import type { Prisma } from '@db';
 import { ConnectionRepository } from '../repositories/connection.repository';
 import { CredentialVaultService } from '../services/credential-vault.service';
 import { OAuthCredentialsService } from '../services/oauth-credentials.service';
+import { getRipplingBearerToken } from '../services/rippling-credentials';
 import {
   getManifest,
   registry,
@@ -661,14 +662,14 @@ export class SyncController {
     let credentials =
       await this.credentialVaultService.getDecryptedCredentials(connectionId);
 
-    if (!credentials?.access_token) {
+    if (!credentials || !getRipplingBearerToken(credentials)) {
       throw new HttpException(
         'No valid credentials found. Please reconnect the integration.',
         HttpStatus.UNAUTHORIZED,
       );
     }
 
-    // Try to refresh the token if it might be expired
+    // Legacy OAuth connections only: API-key connections have no refresh token.
     const manifest = getManifest('rippling');
     const oauthConfig =
       manifest?.auth.type === 'oauth2' ? manifest.auth.config : null;
@@ -713,7 +714,8 @@ export class SyncController {
     }
 
     // Verify we still have valid credentials after potential refresh
-    if (!credentials?.access_token) {
+    const accessToken = getRipplingBearerToken(credentials);
+    if (!accessToken) {
       throw new HttpException(
         'No valid credentials found after refresh attempt. Please reconnect.',
         HttpStatus.UNAUTHORIZED,
@@ -743,8 +745,6 @@ export class SyncController {
       next_link?: string;
     }
 
-    const accessToken = credentials.access_token;
-
     const workers: RipplingWorker[] = [];
 
     try {
@@ -770,14 +770,14 @@ export class SyncController {
 
           if (response.status === 401) {
             throw new HttpException(
-              'Rippling credentials expired. Please reconnect.',
+              'Rippling rejected the API key. Check it has not been revoked and reconnect with a valid key.',
               HttpStatus.UNAUTHORIZED,
             );
           }
 
           if (response.status === 403) {
             throw new HttpException(
-              'Access denied. Make sure the Rippling app has the required scopes and is properly authorized.',
+              'Access denied. Make sure the Rippling API key has read access to Workers.',
               HttpStatus.FORBIDDEN,
             );
           }
