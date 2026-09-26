@@ -32,6 +32,8 @@ export function createCheckrGet(
     }
     const response = await fetchImpl(url, {
       headers: { Authorization: authorization, Accept: 'application/json' },
+      // A redirect could carry the key to another host; Checkr's API never redirects.
+      redirect: 'error',
       signal: AbortSignal.timeout(30_000),
     });
     if (response.status === 401) {

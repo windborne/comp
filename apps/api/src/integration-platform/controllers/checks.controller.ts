@@ -29,6 +29,7 @@ import {
 } from '@trycompai/integration-platform';
 import { ConnectionRepository } from '../repositories/connection.repository';
 import { ConnectionService } from '../services/connection.service';
+import { checkContextMetadata } from '../utils/check-context-metadata';
 import { CredentialVaultService } from '../services/credential-vault.service';
 import { OAuthCredentialsService } from '../services/oauth-credentials.service';
 import { ProviderRepository } from '../repositories/provider.repository';
@@ -310,6 +311,7 @@ export class ChecksController {
         variables,
         connectionId,
         organizationId: connection.organizationId,
+        metadata: checkContextMetadata(connection.metadata),
         checkId: body.checkId,
         onTokenRefresh,
         logger: {

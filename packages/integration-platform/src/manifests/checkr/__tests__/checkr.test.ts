@@ -53,19 +53,27 @@ describe('checkr report rules', () => {
 });
 
 describe('checkrBackgroundChecksCheck', () => {
-  async function run(
-    candidates: CheckrCandidate[],
-    reports: Record<string, CheckrReport>,
-    credentials: Record<string, string> = { api_key: 'sk_live' },
-  ) {
+  async function run({
+    candidates,
+    reports,
+    linked,
+    credentials = { api_key: 'sk_live' },
+  }: {
+    candidates: CheckrCandidate[];
+    reports: Record<string, CheckrReport>;
+    linked: string[] | null;
+    credentials?: Record<string, string>;
+  }) {
     const passed: CheckResult[] = [];
     const failed: CheckResult[] = [];
     const calls: Array<{ path: string; baseUrl?: string; auth?: string }> = [];
+    const byId = new Map(candidates.map((c) => [c.id, c]));
     const ctx = {
       credentials,
       variables: {},
       connectionId: 'conn_1',
       organizationId: 'org_1',
+      metadata: linked ? { checkr: { linkedCandidateIds: linked, syncedAt: '2026-09-25T08:00:00Z' } } : {},
       log: () => {},
       warn: () => {},
       error: () => {},
@@ -73,8 +81,8 @@ describe('checkrBackgroundChecksCheck', () => {
       fail: (r: CheckResult) => failed.push(r),
       fetch: (async (path: string, options?: { baseUrl?: string; headers?: Record<string, string> }) => {
         calls.push({ path, baseUrl: options?.baseUrl, auth: options?.headers?.Authorization });
-        if (path.startsWith('/v1/candidates')) return { data: candidates, next_href: null };
         const id = path.split('/').pop() ?? '';
+        if (path.startsWith('/v1/candidates/')) return byId.get(id);
         if (!reports[id]) throw new Error('HTTP 404');
         return reports[id];
       }) as CheckContext['fetch'],
@@ -83,29 +91,47 @@ describe('checkrBackgroundChecksCheck', () => {
     return { passed, failed, calls };
   }
 
-  it('passes clear reports, fails flagged ones and skips candidates without a report', async () => {
-    const { passed, failed, calls } = await run(
-      [
+  it('evaluates only candidates linked to employees, without result details in evidence', async () => {
+    const { passed, failed, calls } = await run({
+      candidates: [
         { id: 'cand_clear', first_name: 'Ada', last_name: 'L', email: 'ada@personal.test', report_ids: ['r1'] },
         { id: 'cand_flag', first_name: 'Bo', report_ids: ['r2'] },
-        { id: 'cand_invited', first_name: 'Cy', report_ids: [] },
+        { id: 'cand_applicant', first_name: 'Never', last_name: 'Hired', report_ids: ['r3'] },
       ],
-      { r1: report({ id: 'r1' }), r2: report({ id: 'r2', result: 'consider' }) },
-    );
+      reports: {
+        r1: report({ id: 'r1' }),
+        r2: report({ id: 'r2', result: 'consider', adjudication: 'pre_adverse_action' }),
+        r3: report({ id: 'r3', result: 'consider' }),
+      },
+      linked: ['cand_clear', 'cand_flag'],
+    });
 
     expect(passed.map((r) => r.resourceId)).toEqual(['cand_clear']);
     expect(failed.map((r) => r.resourceId)).toEqual(['cand_flag']);
-    expect(JSON.stringify(passed[0].evidence)).not.toContain('ada@personal.test');
+    expect(calls.some((c) => c.path.includes('cand_applicant') || c.path.endsWith('/r3'))).toBe(false);
+    const allOutput = JSON.stringify([...passed, ...failed]);
+    for (const leaked of ['ada@personal.test', 'consider', 'adverse']) expect(allOutput).not.toContain(leaked);
     expect(calls[0]).toMatchObject({ baseUrl: 'https://api.checkr.com', auth: checkrAuthHeader('sk_live') });
   });
 
-  it('uses the staging API for a staging connection', async () => {
-    const { calls } = await run([], {}, { api_key: 'sk_test', environment: 'staging' });
-    expect(calls[0].baseUrl).toBe('https://api.checkr-staging.com');
+  it('records nothing for a staging (test mode) connection', async () => {
+    const { passed, failed, calls } = await run({
+      candidates: [{ id: 'c', report_ids: ['r1'] }],
+      reports: { r1: report({ id: 'r1' }) },
+      linked: ['c'],
+      credentials: { api_key: 'sk_test', environment: 'staging' },
+    });
+    expect([passed.length, failed.length, calls.length]).toEqual([0, 0, 0]);
+  });
+
+  it('asks for a sync when no candidates have been linked yet', async () => {
+    const { failed, calls } = await run({ candidates: [], reports: {}, linked: null });
+    expect(failed[0].title).toBe('Checkr background checks have not been synced yet');
+    expect(calls).toEqual([]);
   });
 
   it('fails the run when no API key is stored', async () => {
-    const { failed } = await run([], {}, {});
+    const { failed } = await run({ candidates: [], reports: {}, linked: [], credentials: {} });
     expect(failed[0].title).toBe('Checkr API key missing');
   });
 });

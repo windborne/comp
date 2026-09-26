@@ -1,11 +1,6 @@
 import { TASK_TEMPLATES } from '../../../task-mappings';
 import type { IntegrationCheck } from '../../../types';
-import {
-  checkrCandidateName,
-  listCheckrCandidates,
-  loadCheckrReports,
-  type CheckrGet,
-} from '../checkr-client';
+import { checkrCandidateName, loadCheckrReports, type CheckrGet } from '../checkr-client';
 import {
   checkrAuthHeader,
   checkrCandidateUrl,
@@ -13,20 +8,29 @@ import {
   checkrEnvironment,
   currentCheckrReport,
   evaluateCheckrReport,
+  readCheckrLinkedCandidateIds,
 } from '../checkr-reports';
+import type { CheckrCandidate } from '../types';
 
+const credential = (value: string | string[] | undefined): string =>
+  (Array.isArray(value) ? value[0] : value)?.trim() ?? '';
+
+/**
+ * Evaluates only the Checkr candidates the background-check sync linked to the
+ * organization's active members (connection metadata), never applicants who
+ * were not hired. Evidence carries a pass/fail verdict, not the report's
+ * result or adjudication, because check evidence is readable by auditors.
+ */
 export const checkrBackgroundChecksCheck: IntegrationCheck = {
   id: 'checkr_background_checks',
   name: 'Background checks completed in Checkr',
   description:
-    "Each Checkr candidate's current report is complete with a clear or adjudicated result, and none is flagged, disputed or stalled.",
+    "Each current employee's Checkr report is complete and cleared, and none is flagged, disputed, suspended or stalled.",
   taskMapping: TASK_TEMPLATES.employeeVerification,
   defaultSeverity: 'medium',
 
   run: async (ctx) => {
-    const apiKey = String(
-      Array.isArray(ctx.credentials.api_key) ? ctx.credentials.api_key[0] : ctx.credentials.api_key ?? '',
-    );
+    const apiKey = credential(ctx.credentials.api_key);
     if (!apiKey) {
       ctx.fail({
         title: 'Checkr API key missing',
@@ -38,11 +42,43 @@ export const checkrBackgroundChecksCheck: IntegrationCheck = {
       });
       return;
     }
-    const headers = { Authorization: checkrAuthHeader(apiKey), Accept: 'application/json' };
-    const baseUrl = CHECKR_API_BASE_URLS[checkrEnvironment(ctx.credentials.environment)];
-    const get: CheckrGet = (pathOrUrl) => ctx.fetch(pathOrUrl, { baseUrl, headers });
+    const environment = checkrEnvironment(ctx.credentials.environment);
+    if (environment === 'staging') {
+      ctx.log('Checkr is connected in Staging (test mode): no compliance results are recorded.');
+      return;
+    }
+    const linkedIds = readCheckrLinkedCandidateIds(ctx.metadata);
+    if (!linkedIds) {
+      ctx.fail({
+        title: 'Checkr background checks have not been synced yet',
+        description: 'The daily Checkr sync links candidates to employees; it has not run for this connection.',
+        resourceType: 'integration',
+        resourceId: ctx.connectionId,
+        severity: 'low',
+        remediation: 'Wait for the daily sync, or run POST /v1/integrations/sync/checkr/background-checks for this connection.',
+      });
+      return;
+    }
 
-    const candidates = await listCheckrCandidates(get);
+    const base = new URL(CHECKR_API_BASE_URLS[environment]);
+    const headers = { Authorization: checkrAuthHeader(apiKey), Accept: 'application/json' };
+    const get: CheckrGet = (pathOrUrl) => {
+      if (new URL(pathOrUrl, base).origin !== base.origin) {
+        throw new Error('Refusing to send the Checkr key to another host');
+      }
+      return ctx.fetch(pathOrUrl, { baseUrl: base.origin, headers });
+    };
+
+    const candidates: CheckrCandidate[] = [];
+    for (const id of linkedIds) {
+      try {
+        candidates.push(await get<CheckrCandidate>(`/v1/candidates/${encodeURIComponent(id)}`));
+      } catch (error) {
+        ctx.warn(`Could not read Checkr candidate ${id}`, {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
     const reports = await loadCheckrReports({
       get,
       candidates,
@@ -51,33 +87,28 @@ export const checkrBackgroundChecksCheck: IntegrationCheck = {
           error: error instanceof Error ? error.message : String(error),
         }),
     });
-    ctx.log(`Evaluating ${candidates.length} Checkr candidates`);
+    ctx.log(`Evaluating ${candidates.length} Checkr candidates linked to current employees`);
 
     const now = new Date();
     for (const candidate of candidates) {
       const report = currentCheckrReport(reports.get(candidate.id) ?? []);
-      if (!report) continue; // invited, no report ordered yet
+      if (!report) continue;
       const verdict = evaluateCheckrReport(report, now);
       if (verdict.outcome === 'skip') continue;
 
       const name = checkrCandidateName(candidate) || `Candidate ${candidate.id}`;
-      // Personal emails stay out of evidence; the name and Checkr link identify the person.
       const evidence = {
         candidateId: candidate.id,
         candidate: name,
         reportId: report.id,
         package: report.package ?? null,
-        status: report.status,
-        result: report.result ?? null,
-        adjudication: report.adjudication ?? null,
-        createdAt: report.created_at ?? null,
         completedAt: report.completed_at ?? null,
         link: checkrCandidateUrl(candidate.id),
       };
       if (verdict.outcome === 'pass') {
         ctx.pass({
           title: `${name}: background check complete`,
-          description: verdict.reason,
+          description: 'The current Checkr report is complete and cleared.',
           resourceType: 'checkr_candidate',
           resourceId: candidate.id,
           evidence,
@@ -85,7 +116,7 @@ export const checkrBackgroundChecksCheck: IntegrationCheck = {
       } else {
         ctx.fail({
           title: `${name}: background check needs attention`,
-          description: verdict.reason,
+          description: 'The current Checkr report is not complete and cleared. Review it in Checkr.',
           resourceType: 'checkr_candidate',
           resourceId: candidate.id,
           severity: verdict.severity,

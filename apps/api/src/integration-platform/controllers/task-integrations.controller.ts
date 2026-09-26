@@ -35,6 +35,7 @@ import { CheckRunRepository } from '../repositories/check-run.repository';
 import { CredentialVaultService } from '../services/credential-vault.service';
 import { OAuthCredentialsService } from '../services/oauth-credentials.service';
 import { TaskIntegrationChecksService } from '../services/task-integration-checks.service';
+import { checkContextMetadata } from '../utils/check-context-metadata';
 import { getStringValue } from '../utils/credential-utils';
 import { isCheckDisabledForTask } from '../utils/disabled-task-checks';
 import { getProviderSummary } from '../utils/provider-summary';
@@ -621,6 +622,7 @@ export class TaskIntegrationsController {
         variables,
         connectionId,
         organizationId,
+        metadata: checkContextMetadata(connection.metadata),
         checkId: checkDef.id, // Only run this specific check
         onTokenRefresh,
         logger: {

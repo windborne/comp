@@ -65,30 +65,44 @@ export function currentCheckrReport(reports: CheckrReport[]): CheckrReport | nul
 }
 
 export type CheckrReportVerdict =
-  | { outcome: 'pass'; reason: string }
-  | { outcome: 'fail'; reason: string; severity: 'low' | 'medium' | 'high' }
-  | { outcome: 'skip'; reason: string };
+  | { outcome: 'pass' }
+  | { outcome: 'fail'; severity: 'low' | 'medium' | 'high' }
+  | { outcome: 'skip' };
 
-/** Compliance verdict for one candidate's current report. */
+/**
+ * Compliance verdict for one candidate's current report. Deliberately carries
+ * no result/adjudication detail: check evidence is readable by auditors, and a
+ * consumer report's outcome must not leak into it.
+ */
 export function evaluateCheckrReport(report: CheckrReport, now: Date): CheckrReportVerdict {
   const status = compStatusForCheckrReport(report);
-  if (status === 'completed') {
-    return {
-      outcome: 'pass',
-      reason: report.result === 'consider' ? 'Completed; employer engaged after review' : 'Completed with a clear result',
-    };
-  }
-  if (status === 'completed_with_flags') {
-    return { outcome: 'fail', reason: 'Completed with a "consider" result that has not been adjudicated', severity: 'high' };
-  }
-  if (status === 'in_review') {
-    return { outcome: 'fail', reason: `Report is ${report.status}`, severity: 'medium' };
-  }
+  if (status === 'completed') return { outcome: 'pass' };
+  if (status === 'completed_with_flags') return { outcome: 'fail', severity: 'high' };
+  if (status === 'in_review') return { outcome: 'fail', severity: 'medium' };
   if (status === 'in_progress') {
     const ageDays = (now.getTime() - reportTime(report)) / 86_400_000;
-    return ageDays > CHECKR_STALLED_AFTER_DAYS
-      ? { outcome: 'fail', reason: `Pending for ${Math.floor(ageDays)} days`, severity: 'low' }
-      : { outcome: 'skip', reason: 'In progress' };
+    return ageDays > CHECKR_STALLED_AFTER_DAYS ? { outcome: 'fail', severity: 'low' } : { outcome: 'skip' };
   }
-  return { outcome: 'skip', reason: 'Cancelled' };
+  return { outcome: 'skip' };
+}
+
+/**
+ * Connection metadata written by the API's background-check sync: the Checkr
+ * candidates linked to the organization's active members. The check only
+ * evaluates these, never applicants who were not hired.
+ */
+export const CHECKR_METADATA_KEY = 'checkr';
+
+export interface CheckrConnectionMetadata {
+  linkedCandidateIds: string[];
+  syncedAt: string;
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+export function readCheckrLinkedCandidateIds(metadata: unknown): string[] | null {
+  const entry = isRecord(metadata) ? metadata[CHECKR_METADATA_KEY] : undefined;
+  const ids = isRecord(entry) ? entry.linkedCandidateIds : undefined;
+  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : null;
 }

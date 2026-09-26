@@ -140,6 +140,8 @@ export {
   checkrCandidateUrl,
   checkrEnvironment,
   CHECKR_API_BASE_URLS,
+  CHECKR_METADATA_KEY,
+  readCheckrLinkedCandidateIds,
   compStatusForCheckrReport,
   currentCheckrReport,
   listCheckrCandidates,
@@ -147,6 +149,7 @@ export {
 } from './manifests/checkr';
 export type {
   CheckrCandidate,
+  CheckrConnectionMetadata,
   CheckrGet,
   CheckrReport,
   CompBackgroundCheckStatus,

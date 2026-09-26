@@ -7,7 +7,8 @@ import { PDFDocument, StandardFonts } from 'pdf-lib';
 /**
  * One-page summary of a Checkr report, attached to the member's background
  * check so the People page shows a report (Checkr's own PDF is not exposed
- * through its API).
+ * through its API). Leaves out the result and adjudication: attachments are
+ * readable by anyone with member:read, including auditors; Checkr holds them.
  */
 export async function buildCheckrReportPdf({
   organizationName,
@@ -31,8 +32,6 @@ export async function buildCheckrReportPdf({
     ['Report', report.id],
     ['Package', report.package ?? 'n/a'],
     ['Report status', report.status],
-    ['Result', report.result ?? 'n/a'],
-    ['Adjudication', report.adjudication ?? 'none'],
     ['Ordered', report.created_at ?? 'n/a'],
     ['Completed', report.completed_at ?? 'n/a'],
     ['Status in Comp', compStatus],
