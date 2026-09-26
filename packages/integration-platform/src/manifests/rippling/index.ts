@@ -2,8 +2,8 @@
  * Rippling Integration Manifest
  *
  * This integration connects to Rippling to sync employee data.
- * It does NOT use the checks system - instead, a custom UI in the
- * people page handles the OAuth flow and employee sync.
+ * It does NOT use the checks system - instead, the People page's employee
+ * sync reads Rippling's worker list with the connection's API key.
  */
 
 import type { IntegrationManifest } from '../../types';
@@ -17,37 +17,30 @@ export const ripplingManifest: IntegrationManifest = {
   docsUrl: 'https://developer.rippling.com',
   isActive: true,
 
+  // Customer-created API key (no Rippling partner app needed). Rippling's REST
+  // API takes it as a Bearer token; the employee sync reads it via
+  // getRipplingBearerToken (apps/api), which also accepts legacy OAuth tokens.
   auth: {
-    type: 'oauth2',
+    type: 'custom',
     config: {
-      // {APP_NAME} is replaced at runtime with customSettings.appName from IntegrationOAuthApp
-      authorizeUrl: 'https://app.rippling.com/apps/PLATFORM/{APP_NAME}/authorize',
-      tokenUrl: 'https://api.rippling.com/api/o/token/',
-      // Scopes are configured in the Rippling Developer Portal per-app
-      // User needs: "Read access to Workers" under HR information
-      scopes: [],
-      pkce: false,
-      // Rippling requires Basic Auth header with base64(client_id:client_secret)
-      clientAuthMethod: 'header',
-      supportsRefreshToken: true,
-      setupInstructions: `To create a Rippling OAuth App:
-1. Go to Rippling Developer Portal and create an app
-2. Set the Default Redirect URL to the callback URL shown below
-3. Copy the Client ID and Client Secret
-4. Enable the required scopes under HR information: "Read access to Workers"
-5. Note your app name - it's used in the authorize URL`,
-      createAppUrl: 'https://app.rippling.com/partner',
-      additionalOAuthSettings: [
+      description: 'Connect with a Rippling API key.',
+      credentialFields: [
         {
-          id: 'appName',
-          label: 'Rippling App Name',
-          type: 'text',
-          helpText:
-            'Your app name from the Rippling developer portal. This appears in the authorize URL (app.rippling.com/apps/PLATFORM/{appName}/authorize).',
+          id: 'api_key',
+          label: 'API key',
+          type: 'password',
           required: true,
-          token: '{APP_NAME}',
+          placeholder: 'Rippling API key',
+          helpText:
+            'Create it as a Rippling admin with read access to Workers. It inherits your permissions plus the scopes you select.',
         },
       ],
+      setupInstructions: `To connect Rippling:
+1. Sign in to Rippling as an admin who can see every employee.
+2. Create an API key for the Rippling REST API (see developer.rippling.com, "API Tokens and Permissions").
+3. Give it read access to Workers. Comp only reads the worker list.
+4. Paste the key here.
+The key inherits the permissions of the admin who created it, so create it from an account that will stay active.`,
     },
   },
 
