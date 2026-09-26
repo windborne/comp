@@ -7,6 +7,9 @@ jest.mock('./jobs/token-refresh.job', () => ({
 jest.mock('./jobs/employee-sync.job', () => ({
   runEmployeeSyncJob: jest.fn(),
 }));
+jest.mock('./jobs/background-check-sync.job', () => ({
+  runBackgroundCheckSyncJob: jest.fn(),
+}));
 
 import { NotFoundException } from '@nestjs/common';
 import { runIntegrationChecksJob } from './jobs/integration-checks.job';
@@ -50,7 +53,7 @@ describe('SelfHostedSchedulerService', () => {
     process.env = originalEnv;
   });
 
-  it('schedules the three daily jobs on a self-hosted install', () => {
+  it('schedules the daily jobs on a self-hosted install', () => {
     const service = new SelfHostedSchedulerService();
     service.onApplicationBootstrap();
 
@@ -60,6 +63,7 @@ describe('SelfHostedSchedulerService', () => {
       ['token-refresh', 5],
       ['integration-checks', 6],
       ['employee-sync', 7],
+      ['background-check-sync', 8],
     ]);
     expect(jobs.every((j) => j.nextRunAt !== null)).toBe(true);
 

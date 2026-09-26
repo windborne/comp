@@ -23,6 +23,11 @@ model BackgroundCheckRequest {
   lastSyncedAt              DateTime?
   reportSnapshot            Json?
   reportSyncedAt            DateTime?
+  /// Set when the record is kept in step with an external provider's check
+  /// (e.g. "checkr") instead of a check run through Comp.
+  externalProvider          String?
+  externalCandidateId       String?
+  externalReportId          String?
   createdAt                 DateTime              @default(now())
   updatedAt                 DateTime              @updatedAt
 
@@ -34,6 +39,7 @@ model BackgroundCheckRequest {
   @@index([organizationId])
   @@index([memberId])
   @@index([status])
+  @@index([organizationId, externalProvider])
   @@map("background_check_requests")
 }
 

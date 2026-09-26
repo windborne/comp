@@ -5075,6 +5075,49 @@
         }
       }
     },
+    "/v1/integrations/sync/checkr/background-checks": {
+      "post": {
+        "description": "Updates each person's background-check record from their current Checkr report (status, result, completion date) and attaches a summary. Runs daily; call it to sync now.",
+        "operationId": "CheckrSyncController_syncCheckrBackgroundChecks_v1",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "required": true,
+            "in": "query",
+            "description": "The Checkr connection ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "apikey": []
+          }
+        ],
+        "summary": "Sync background checks from Checkr",
+        "tags": [
+          "Integrations"
+        ],
+        "x-speakeasy-mcp": {
+          "name": "sync-checkr-background-checks"
+        },
+        "x-mint": {
+          "metadata": {
+            "title": "Sync background checks from Checkr | Comp AI API",
+            "sidebarTitle": "Sync background checks from Checkr",
+            "description": "Updates each person's background-check record from their current Checkr report (status, result, completion date) and attaches a summary. Runs daily; call it.",
+            "og:title": "Sync background checks from Checkr | Comp AI API",
+            "og:description": "Updates each person's background-check record from their current Checkr report (status, result, completion date) and attaches a summary. Runs daily; call it."
+          }
+        }
+      }
+    },
     "/v1/integrations/sync/two-factor-source": {
       "get": {
         "operationId": "TwoFactorSourceController_getTwoFactorSource_v1",
@@ -28333,12 +28376,16 @@
             "example": "Contractor with existing background check on file from staffing agency."
           },
           "onboardDate": {
-            "type": "object",
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
             "description": "Employee onboard date",
             "example": "2026-01-15T00:00:00.000Z"
           },
           "offboardDate": {
-            "type": "object",
+            "type": "string",
+            "format": "date-time",
+            "nullable": true,
             "description": "Employee offboard date",
             "example": "2026-04-30T00:00:00.000Z"
           }

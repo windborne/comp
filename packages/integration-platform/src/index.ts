@@ -133,6 +133,25 @@ export type {
 // Individual manifests (for direct import if needed)
 export { manifest as githubManifest } from './manifests/github';
 
+// Checkr client + report rules, shared with the API's background-check sync
+export {
+  checkrAuthHeader,
+  checkrCandidateName,
+  checkrCandidateUrl,
+  checkrEnvironment,
+  CHECKR_API_BASE_URLS,
+  compStatusForCheckrReport,
+  currentCheckrReport,
+  listCheckrCandidates,
+  loadCheckrReports,
+} from './manifests/checkr';
+export type {
+  CheckrCandidate,
+  CheckrGet,
+  CheckrReport,
+  CompBackgroundCheckStatus,
+} from './manifests/checkr';
+
 // Directory sync email include/exclude terms (Google Workspace, JumpCloud, checks)
 export { matchesSyncFilterTerms, parseSyncFilterTerms } from './sync-filter/email-exclusion-terms';
 
