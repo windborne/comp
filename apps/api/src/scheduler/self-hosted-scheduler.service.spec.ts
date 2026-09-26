@@ -7,6 +7,9 @@ jest.mock('./jobs/token-refresh.job', () => ({
 jest.mock('./jobs/employee-sync.job', () => ({
   runEmployeeSyncJob: jest.fn(),
 }));
+jest.mock('../integration-platform/checkr/checkr-background-check-sync.service', () => ({
+  CheckrBackgroundCheckSyncService: class {},
+}));
 jest.mock('./jobs/background-check-sync.job', () => ({
   runBackgroundCheckSyncJob: jest.fn(),
 }));
@@ -63,12 +66,21 @@ describe('SelfHostedSchedulerService', () => {
       ['token-refresh', 5],
       ['integration-checks', 6],
       ['employee-sync', 7],
-      ['background-check-sync', 8],
     ]);
     expect(jobs.every((j) => j.nextRunAt !== null)).toBe(true);
 
     service.onApplicationShutdown();
     expect(service.listJobs().jobs).toEqual([]);
+  });
+
+  it('adds the Checkr background-check sync at 08:00 when the sync service is available', () => {
+    const service = new SelfHostedSchedulerService(
+      { sync: jest.fn() } as unknown as ConstructorParameters<typeof SelfHostedSchedulerService>[0],
+    );
+    service.onApplicationBootstrap();
+
+    expect(service.listJobs().jobs.map((j) => [j.id, j.hourUtc])).toContainEqual(['background-check-sync', 8]);
+    service.onApplicationShutdown();
   });
 
   it('schedules nothing when Trigger.dev owns the schedules', () => {

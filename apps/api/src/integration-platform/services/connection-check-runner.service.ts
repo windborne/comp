@@ -14,6 +14,7 @@ import { ProviderRepository } from '../repositories/provider.repository';
 import { CredentialVaultService } from './credential-vault.service';
 import { OAuthCredentialsService } from './oauth-credentials.service';
 import { getStringValue } from '../utils/credential-utils';
+import { checkContextMetadata } from '../utils/check-context-metadata';
 
 export type RunAllChecksResult = Awaited<ReturnType<typeof runAllChecks>>;
 
@@ -76,6 +77,7 @@ export class ConnectionCheckRunnerService {
       variables,
       connectionId,
       organizationId,
+      metadata: checkContextMetadata(connection.metadata),
       checkId,
       onTokenRefresh,
       logger: {
@@ -133,6 +135,7 @@ export class ConnectionCheckRunnerService {
       variables,
       connectionId,
       organizationId,
+      metadata: checkContextMetadata(connection.metadata),
       onTokenRefresh,
       logger: {
         info: (msg, data) => this.logger.log(msg, data),

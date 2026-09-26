@@ -197,30 +197,3 @@ export function syncDevices({
     schema: z.object({}).passthrough(),
   });
 }
-
-const checkrSyncResponse = z
-  .object({
-    success: z.boolean().optional(),
-    created: z.number().optional(),
-    updated: z.number().optional(),
-    unchanged: z.number().optional(),
-    reportsAttached: z.number().optional(),
-    activeMembersWithoutCompletedCheck: z.number().optional(),
-  })
-  .passthrough();
-export type CheckrSyncResponse = z.infer<typeof checkrSyncResponse>;
-
-export function syncCheckrBackgroundChecks({
-  organizationId,
-  connectionId,
-}: {
-  organizationId: string;
-  connectionId: string;
-}): Promise<CheckrSyncResponse> {
-  return callInternalApi({
-    method: 'POST',
-    path: `/v1/integrations/sync/checkr/background-checks?connectionId=${encodeURIComponent(connectionId)}`,
-    organizationId,
-    schema: checkrSyncResponse,
-  });
-}

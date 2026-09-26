@@ -104,6 +104,8 @@ import { CheckResultsService } from './services/check-results.service';
     // Universal, feature-agnostic access to integration check results. Any
     // feature module that needs to reuse check output injects this.
     CheckResultsService,
+    // The self-hosted scheduler runs the daily Checkr sync in-process.
+    CheckrBackgroundCheckSyncService,
   ],
 })
 export class IntegrationPlatformModule {}

@@ -13,6 +13,8 @@ describe('createCheckrGet', () => {
     const [url, init] = fetchImpl.mock.calls[0];
     expect(String(url)).toBe('https://api.checkr.com/v1/candidates?per_page=100');
     expect(init.headers.Authorization).toBe(`Basic ${Buffer.from('sk_live:').toString('base64')}`);
+    // A redirect could carry the key to another host.
+    expect(init.redirect).toBe('error');
   });
 
   it('uses the staging API for a staging connection and follows its next_href', async () => {

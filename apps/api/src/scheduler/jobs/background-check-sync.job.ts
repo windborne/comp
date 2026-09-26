@@ -1,6 +1,5 @@
 import { db } from '@db';
 import type { SchedulerLog } from '../../integration-platform/scheduling/types';
-import { syncCheckrBackgroundChecks } from '../loopback-client';
 
 export interface BackgroundCheckSyncJobSummary extends Record<string, unknown> {
   connections: number;
@@ -10,13 +9,24 @@ export interface BackgroundCheckSyncJobSummary extends Record<string, unknown> {
   updated: number;
 }
 
+type CheckrSync = (args: { organizationId: string; connectionId: string }) => Promise<{
+  created: number;
+  updated: number;
+  activeMembersWithoutCompletedCheck: number;
+}>;
+
 /**
  * Daily Checkr sync: brings every organization's background-check records in
- * line with Checkr through the API's own sync endpoint.
+ * line with Checkr. Runs the sync service in-process (no acting user, so no
+ * per-member audit rows; the scheduler log records the run).
  */
-export async function runBackgroundCheckSyncJob(
-  log: SchedulerLog,
-): Promise<BackgroundCheckSyncJobSummary> {
+export async function runBackgroundCheckSyncJob({
+  log,
+  sync,
+}: {
+  log: SchedulerLog;
+  sync: CheckrSync;
+}): Promise<BackgroundCheckSyncJobSummary> {
   const connections = await db.integrationConnection.findMany({
     where: { status: 'active', provider: { slug: 'checkr' } },
     select: { id: true, organizationId: true },
@@ -31,13 +41,10 @@ export async function runBackgroundCheckSyncJob(
 
   for (const connection of connections) {
     try {
-      const result = await syncCheckrBackgroundChecks({
-        organizationId: connection.organizationId,
-        connectionId: connection.id,
-      });
+      const result = await sync({ organizationId: connection.organizationId, connectionId: connection.id });
       summary.succeeded++;
-      summary.created += result.created ?? 0;
-      summary.updated += result.updated ?? 0;
+      summary.created += result.created;
+      summary.updated += result.updated;
       log.info('Checkr background-check sync completed', {
         organizationId: connection.organizationId,
         created: result.created,

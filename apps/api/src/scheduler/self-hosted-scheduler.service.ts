@@ -2,6 +2,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
   type OnApplicationBootstrap,
   type OnApplicationShutdown,
@@ -16,6 +17,7 @@ import {
   type DailyJobStatus,
   type JobRunOutcome,
 } from './daily-schedule';
+import { CheckrBackgroundCheckSyncService } from '../integration-platform/checkr/checkr-background-check-sync.service';
 import { runBackgroundCheckSyncJob } from './jobs/background-check-sync.job';
 import { runEmployeeSyncJob } from './jobs/employee-sync.job';
 import { runIntegrationChecksJob } from './jobs/integration-checks.job';
@@ -56,13 +58,6 @@ export const SELF_HOSTED_JOBS: DailyJobDefinition[] = [
     hourUtc: 7,
     run: runEmployeeSyncJob,
   },
-  {
-    // After the employee sync, so new hires exist before their checks are matched.
-    id: 'background-check-sync',
-    description: 'Sync background checks from Checkr',
-    hourUtc: 8,
-    run: runBackgroundCheckSyncJob,
-  },
 ];
 
 /**
@@ -78,6 +73,27 @@ export class SelfHostedSchedulerService
   private readonly log: SchedulerLog = nestSchedulerLog(this.logger);
   private readonly runners = new Map<string, DailyJobRunner>();
   readonly mode: SchedulerMode = resolveSchedulerMode(process.env);
+  private readonly definitions: DailyJobDefinition[];
+
+  constructor(@Optional() checkrSync?: CheckrBackgroundCheckSyncService) {
+    this.definitions = [
+      ...SELF_HOSTED_JOBS,
+      ...(checkrSync
+        ? [
+            {
+              // After the employee sync, so new hires exist before their checks are matched.
+              // Calls the service in-process: the sync needs member:update, which the
+              // loopback service token deliberately lacks.
+              id: 'background-check-sync',
+              description: 'Sync background checks from Checkr',
+              hourUtc: 8,
+              run: (log: SchedulerLog) =>
+                runBackgroundCheckSyncJob({ log, sync: (args) => checkrSync.sync(args) }),
+            },
+          ]
+        : []),
+    ];
+  }
 
   onApplicationBootstrap(): void {
     if (this.mode === 'trigger') return;
@@ -93,13 +109,13 @@ export class SelfHostedSchedulerService
       );
       return;
     }
-    for (const definition of SELF_HOSTED_JOBS) {
+    for (const definition of this.definitions) {
       const runner = new DailyJobRunner(definition, this.log);
       runner.start();
       this.runners.set(definition.id, runner);
     }
     this.logger.log(
-      `Self-hosted scheduler started: ${SELF_HOSTED_JOBS.map((j) => `${j.id}@${String(j.hourUtc).padStart(2, '0')}:00Z`).join(', ')}`,
+      `Self-hosted scheduler started: ${this.definitions.map((j) => `${j.id}@${String(j.hourUtc).padStart(2, '0')}:00Z`).join(', ')}`,
     );
   }
 
@@ -117,7 +133,7 @@ export class SelfHostedSchedulerService
 
   /** Runs a job now, regardless of its schedule (manual kick from the internal endpoint). */
   async runJob(jobId: string): Promise<JobRunOutcome> {
-    const definition = SELF_HOSTED_JOBS.find((j) => j.id === jobId);
+    const definition = this.definitions.find((j) => j.id === jobId);
     if (!definition) {
       throw new NotFoundException(`Unknown scheduler job: ${jobId}`);
     }

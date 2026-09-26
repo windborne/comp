@@ -5077,7 +5077,7 @@
     },
     "/v1/integrations/sync/checkr/background-checks": {
       "post": {
-        "description": "Updates each person's background-check record from their current Checkr report (status, result, completion date) and attaches a summary. Runs daily; call it to sync now.",
+        "description": "Updates each person's background-check record from their current Checkr report (status, completion date) and attaches a summary. Runs daily; call it to sync now.",
         "operationId": "CheckrSyncController_syncCheckrBackgroundChecks_v1",
         "parameters": [
           {
@@ -5111,9 +5111,9 @@
           "metadata": {
             "title": "Sync background checks from Checkr | Comp AI API",
             "sidebarTitle": "Sync background checks from Checkr",
-            "description": "Updates each person's background-check record from their current Checkr report (status, result, completion date) and attaches a summary. Runs daily; call it.",
+            "description": "Updates each person's background-check record from their current Checkr report (status, completion date) and attaches a summary. Runs daily; call it to sync.",
             "og:title": "Sync background checks from Checkr | Comp AI API",
-            "og:description": "Updates each person's background-check record from their current Checkr report (status, result, completion date) and attaches a summary. Runs daily; call it."
+            "og:description": "Updates each person's background-check record from their current Checkr report (status, completion date) and attaches a summary. Runs daily; call it to sync."
           }
         }
       }
