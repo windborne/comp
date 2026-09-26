@@ -16,6 +16,7 @@ import {
   type DailyJobStatus,
   type JobRunOutcome,
 } from './daily-schedule';
+import { runBackgroundCheckSyncJob } from './jobs/background-check-sync.job';
 import { runEmployeeSyncJob } from './jobs/employee-sync.job';
 import { runIntegrationChecksJob } from './jobs/integration-checks.job';
 import { runTokenRefreshJob } from './jobs/token-refresh.job';
@@ -54,6 +55,13 @@ export const SELF_HOSTED_JOBS: DailyJobDefinition[] = [
     description: 'Sync employees from the configured provider',
     hourUtc: 7,
     run: runEmployeeSyncJob,
+  },
+  {
+    // After the employee sync, so new hires exist before their checks are matched.
+    id: 'background-check-sync',
+    description: 'Sync background checks from Checkr',
+    hourUtc: 8,
+    run: runBackgroundCheckSyncJob,
   },
 ];
 

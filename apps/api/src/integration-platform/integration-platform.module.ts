@@ -1,4 +1,5 @@
 import { Module, forwardRef } from '@nestjs/common';
+import { AttachmentsModule } from '../attachments/attachments.module';
 import { AuthModule } from '../auth/auth.module';
 import { CloudSecurityModule } from '../cloud-security/cloud-security.module';
 import { OAuthController } from './controllers/oauth.controller';
@@ -14,6 +15,8 @@ import { VariablesController } from './controllers/variables.controller';
 import { TaskIntegrationsController } from './controllers/task-integrations.controller';
 import { WebhookController } from './controllers/webhook.controller';
 import { SyncController } from './controllers/sync.controller';
+import { CheckrSyncController } from './controllers/checkr-sync.controller';
+import { CheckrBackgroundCheckSyncService } from './checkr/checkr-background-check-sync.service';
 import { TwoFactorSourceController } from './controllers/two-factor-source.controller';
 import { ServicesController } from './controllers/services.controller';
 import { CredentialVaultService } from './services/credential-vault.service';
@@ -41,7 +44,11 @@ import { GenericDeviceSyncService } from './services/generic-device-sync.service
 import { CheckResultsService } from './services/check-results.service';
 
 @Module({
-  imports: [AuthModule, forwardRef(() => CloudSecurityModule)],
+  imports: [
+    AuthModule,
+    AttachmentsModule,
+    forwardRef(() => CloudSecurityModule),
+  ],
   controllers: [
     OAuthController,
     OAuthAppsController,
@@ -56,6 +63,7 @@ import { CheckResultsService } from './services/check-results.service';
     TaskIntegrationsController,
     WebhookController,
     SyncController,
+    CheckrSyncController,
     TwoFactorSourceController,
     ServicesController,
   ],
@@ -75,6 +83,7 @@ import { CheckResultsService } from './services/check-results.service';
     GenericEmployeeSyncService,
     GenericDeviceSyncService,
     CheckResultsService,
+    CheckrBackgroundCheckSyncService,
     // Repositories
     ProviderRepository,
     ConnectionRepository,

@@ -79,6 +79,11 @@ export class UpdatePeopleDto extends PartialType(CreatePeopleDto) {
   backgroundCheckExemptJustification?: string;
 
   @ApiProperty({
+    // Explicit type: a `string | null` union reflects as Object, which made
+    // generated clients (MCP update-member) reject date strings.
+    type: String,
+    format: 'date-time',
+    nullable: true,
     description: 'Employee onboard date',
     example: '2026-01-15T00:00:00.000Z',
     required: false,
@@ -88,6 +93,11 @@ export class UpdatePeopleDto extends PartialType(CreatePeopleDto) {
   onboardDate?: string | null;
 
   @ApiProperty({
+    // Explicit type: a `string | null` union reflects as Object, which made
+    // generated clients (MCP update-member) reject date strings.
+    type: String,
+    format: 'date-time',
+    nullable: true,
     description: 'Employee offboard date',
     example: '2026-04-30T00:00:00.000Z',
     required: false,
